@@ -1,6 +1,7 @@
 import { CurrenciesModel } from '../Schemas/slyretailCurrenciesSchemas.js';
 import { connectDB } from '../Schemas/slyretailDbConfig.js';
-import { WorldCurrencies } from "../public/js/worldCurrency.js";
+import worldCurrency from '/root/SlyRetail-POS/public/js/worldCurrency.js';
+//import { WorldCurrencies } from "../public/js/worldCurrency.js";
 
 let currencies = [];
 let isBaseCurrency = "";
