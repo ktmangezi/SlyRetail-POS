@@ -1,4 +1,4 @@
-import moment from "moment";
+import moment from "moment-timezone";
 import { ObjectId } from 'mongodb';
 import { CashflowModel } from '../Schemas/slyretailCashflowSchemas.js';
 import { CurrenciesModel } from '../Schemas/slyretailCurrenciesSchemas.js';
@@ -82,6 +82,7 @@ export async function getCashFlowArray(req, startDate, endDate, pageSize, page, 
                         theBeforeIncome += parseFloat(row.CashFlowCashEquiv);
                     }
                 }
+                // console.log("Ihave started my computation from" + theBeforeStartDate.getTime())
 
                 if (startDate.getTime() <= formattedDates2.getTime() && formattedDates2.getTime() <= endDate.getTime()) {
                     if (row.CashFlowType === 'Payout') {
@@ -172,6 +173,7 @@ export async function getCashFlowArray(req, startDate, endDate, pageSize, page, 
             // console.log(index2 +'index2')
             //THE OPENING BALANCE FOR THE SELECTED RANGE
             const openingBalance = parseFloat(theBeforeIncome) - parseFloat(theBeforeExpenses)
+            console.log("Iam The opening Bal " + openingBalance)
             //THEN CREATE THE ARRAY FOR PAYINS, FOR THE CURRENT RANGE 'this is the one to go to the client side js'
             const startIndex = (parseInt(page) - 1) * parseInt(pageSize);
             const endIndex = startIndex + parseInt(pageSize);
@@ -263,43 +265,7 @@ export async function updateCashFlowDate(req, rowId, newDate, sessionId) {
     }
 }
 //=================================================================================================
-// export async function updateCashFlowType(req, rowId, typeSelected, sessionId) {
-//     try {
-//         const db = await connectDB(req, databaseName, signingCriteria, sessionId);
-//         if (db) {
-//             // Create the model with the specific connection
-//             const myCashflowModel = CashflowModel(db);
-//             cashFlows = await myCashflowModel.find()
-//             // Always Sort the array by 'income date' in ascending order, when the user want to change this it is up to her
-//             //and the settings are to be kept under local storage
-//             cashFlows.sort((a, b) => {
-//                 const [dayA, monthA, yearA] = a.CashFlowDate.split('/');
-//                 const [dayB, monthB, yearB] = b.CashFlowDate.split('/');
-//                 return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
-//             });
-//             console.log('i am the  update cashflow type  procedure  ');
-//             await myCashflowModel.updateOne({ _id: ObjectId(rowId) }, {
-//                 $set: {
-//                     CashFlowType: typeSelected,
-//                     CashFlowCategory: 'suspense'
-//                 }
-//             }).then(result => {
-//                 console.log(`${result.modifiedCount} document(s) updated.`);
-//                 modifiedCount = result.modifiedCount
-//                 if (modifiedCount !== 0) {
-//                     amUpdated = true;
-//                 }
-//                 else if (modifiedCount === 0) {
-//                     amUpdated = false;
-//                 }
-//             })
 
-//             return { amUpdated };
-//         }
-//     } catch (err) {
-//         console.error('Error connecting to MongoDB:', err);
-//     }
-// }
 export async function updateCashFlowType(req, rowId, typeSelected, sessionId) {
     try {
         const db = await connectDB(req, databaseName, signingCriteria, sessionId);
@@ -781,7 +747,7 @@ export async function deleteCashFLow(req, checkedRowsId, sessionId) {
 //============================================================================================================
 
 export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatus, sessionId) {
-    let filteredItemsToProcess = [];
+
     let insertedDocuments = [];
     let isSaving = false;
     function dateValidation(csvDate) {
@@ -831,261 +797,299 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
     }
     try {
         const db = await connectDB(req, databaseName, signingCriteria, sessionId);
-        if (db) {
-            // Create the model with the specific connection
-            const myCashflowModel = CashflowModel(db);
-            const myCurrenciesModel = CurrenciesModel(db);
-            const myCategoriesModel = CashflowCategoriesModel(db);
-            //get the base currency
-            let baseCurrency = await myCurrenciesModel.findOne({ BASE_CURRENCY: 'Y' });
-            let payInRowDataArray = []
-            let payOutRowDataArray = []
-            let categoriesToDb = []
-            let payInRowData = {}
-            let payOutRowData = {}
-            let theRate = 0
-            let correctFormattedDate = ''
-            //declare variables that will store the variables
-            let date = '', shift = '', type = '', invoiceNo = '', description = '', currency = '', category = '', amount = 0, rate = 0, id = ''
+        if (!db) throw new Error("Database connection failed");
 
+        // Initialize models
+        const myCashflowModel = CashflowModel(db);
+        const myCurrenciesModel = CurrenciesModel(db);
+        const myCategoriesModel = CashflowCategoriesModel(db);
 
-            let existingCategories = await myCategoriesModel.find({});
+        // Get base currency
+        const baseCurrency = await myCurrenciesModel.findOne({ BASE_CURRENCY: 'Y' });
+        if (!baseCurrency) throw new Error("Base currency not found");
 
-            //cretae a function that will populate the arrays to send to db
-            async function populateArrays(date, shift, invoiceNo, description, currency, category, amount, rate) {
-                // const shiftNumber = "Shift" + data.Shiftnumber + " " + data.POS;
-                //calculate the relative rate to be used using the rate of the base currency and the selected currency
-                if (rate !== 0) {
-                    theRate = rate; // USE HIS RATE, WHEN HIS MATHEMATICS IS NOT BALANCING HE WILL COME BACK AT THIS
+        // Arrays to store data for bulk insertion
+        let payInRowDataArray = [];
+        let payOutRowDataArray = [];
+        let insertedDocuments = [];
+        let insertedCategories = [];
+        let isSaving = false;
+        let theRate = 0
+        let correctFormattedDate = ''
+        //declare variables that will store the variables
+        let date = '', shift = '', type = '', invoiceNo = '', description = '', currency = '', category = '', amount = 0, rate = 0, id = ''
+
+        const findMatchingDocument = async (rowData) => {
+            try {
+                // Check if a document with the same CashFlowType and other fields exists
+                const exists = await myCashflowModel.exists({
+                    CashFlowType: rowData.CashFlowType,
+                    CashFlowInvoiceRef: rowData.CashFlowInvoiceRef,
+                    CashFlowDescription: rowData.CashFlowDescription,
+                    CashFlowCategory: rowData.CashFlowCategory,
+                    CashFlowCurrency: rowData.CashFlowCurrency,
+                    CashFlowAmount: rowData.CashFlowAmount,
+                    CashFlowRate: rowData.CashFlowRate,
+                    CashFlowCashEquiv: rowData.CashFlowCashEquiv,
+                    CashFlowDate: rowData.CashFlowDate,
+                    // Add other fields from rowData if needed
+                });
+
+                if (exists) {
+                    console.log("Data already exists in the database.");
+                    return true;
+                } else {
+                    console.log("Data does not exist in the database.");
+                    return false;
                 }
-                else if (rate === 0) {
-                    //WHEN THE USER HAS NOT SPECIFIED THE CURRENCY AND THE RATE USED
-                    theRate = baseCurrency.RATE;
-                }
-                //get the correct formatted date
-                correctFormattedDate = dateValidation(date)
-                currency = baseCurrency.Currency_Name
-                if (type === 'Pay in') {
-                    const relativeRate = theRate / baseCurrency.RATE;
-                    const cashEquivValue = Number(parseFloat(amount) / parseFloat(relativeRate)).toFixed(2);
-                    payInRowData = {
-                        CashFlowDate: correctFormattedDate, //RE VALIDATE JUST TO BE SURE
-                        CashFlowType: type,
-                        CashFlowShift: shift,
-                        CashFlowInvoiceRef: invoiceNo,
-                        CashFlowDescription: description || 'Unknown PayIn',
-                        CashFlowCategory: category,
-                        CashFlowCurrency: currency,
-                        CashFlowAmount: amount,
-                        CashFlowRate: theRate,
-                        CashFlowCashEquiv: cashEquivValue,
-                    }
-                    // Conditionally add the Tax field if checkTemplateStatus is 'loyverseHeaders'
-                    if (checkTemplateStatus === 'loyverseHeaders' || (checkTemplateStatus === 'slyRetailHeaders' && id === '')) {
-                        payInRowData.Tax = {
-                            vat: { QRCode: "", DeviceId: 0, ZimraFsNo: '', VatNumber: 0, TinNumber: 0, VatAmount: 0, VatStatus: "N" }, ztf: { First: '', Second: '', LevyAmount: 0, ZtfStatus: "N" }
-                        }
-                    }
-                    // Check if the shift exists
-                    const existingPayInShift = await myCashflowModel.findOne({ CashFlowShift: shift, CashFlowType: "Pay in" });
-                    if (existingPayInShift === null) {
-                        // If the shift doesn't exist, insert the new record
-                        payInRowDataArray.push(payInRowData);
+            } catch (error) {
+                console.error("Error checking if data exists:", error);
+                return false;
+            }
+        };
 
-                    }
+        //cretae a function that will populate the arrays to send to db
+        async function populateArrays(date, shift, invoiceNo, description, currency, category, amount, rate, type) {
+            // const shiftNumber = "Shift" + data.Shiftnumber + " " + data.POS;
+            //calculate the relative rate to be used using the rate of the base currency and the selected currency
+            if (rate !== 0) {
+                theRate = rate; // USE HIS RATE, WHEN HIS MATHEMATICS IS NOT BALANCING HE WILL COME BACK AT THIS
+            }
+            else if (rate === 0) {
+                //WHEN THE USER HAS NOT SPECIFIED THE CURRENCY AND THE RATE USED
+                theRate = baseCurrency.RATE;
+            }
+            //get the correct formatted date
+            correctFormattedDate = dateValidation(date)
 
-                    // Check if the shift exists
-                    const existingCategory = await myCategoriesModel.findOne({ category: category, Balance: "PayIn" });
-                    if (!existingCategory) {
-                        let payInCat = {}; //THE NEW DOCUMEN
-                        payInCat["category"] = category;
-                        payInCat["CategoryLimit"] = 0;
-                        payInCat["CategoryLimitRange"] = "";
-                        payInCat["Balance"] = "PayIn";
-                        // If the category doesn't exist, insert the new record
-                        await saveCategoryToDb(payInCat)
-                    }
+            // console.log(itemsToProcess)
+            const relativeRate = theRate / baseCurrency.RATE;
+            const cashEquivValue = Number(parseFloat(amount) / parseFloat(relativeRate)).toFixed(2);
+            console.log(category + 'category')
 
-                }
-                else if (type === 'Payout') {
-                    const relativeRate = theRate / baseCurrency.RATE;
-                    const cashEquivValue = Number(parseFloat(amount) / parseFloat(relativeRate)).toFixed(2);
-                    payOutRowData = {
-                        CashFlowDate: correctFormattedDate, //RE VALIDATE JUST TO BE SURE
-                        CashFlowType: type,
-                        CashFlowShift: shift,
-                        CashFlowInvoiceRef: invoiceNo,
-                        CashFlowDescription: description || 'Unknown PayOut',
-                        CashFlowCategory: category,
-                        CashFlowCurrency: currency,
-                        CashFlowAmount: amount,
-                        CashFlowRate: theRate,
-                        CashFlowCashEquiv: cashEquivValue
-                    }
-                    // Conditionally add the Tax field if checkTemplateStatus is 'loyverseHeaders'
-                    if (checkTemplateStatus === 'loyverseHeaders' || (checkTemplateStatus === 'slyRetailHeaders' && id === '')) {
-                        payOutRowData.Tax = {
-                            vat: { QRCode: "", DeviceId: 0, ZimraFsNo: '', VatNumber: 0, TinNumber: 0, VatAmount: 0, VatStatus: "N" }, ztf: { First: '', Second: '', LevyAmount: 0, ZtfStatus: "N" }
-                        }
-                    }
-
-                    // Check if the shift exists
-                    const existingPayOutShift = await myCashflowModel.findOne({ CashFlowShift: shift, CashFlowType: "Payout" });
-
-                    if (existingPayOutShift === null) {
-                        // If the shift doesn't exist, insert the new record
-                        payOutRowDataArray.push(payOutRowData)
-                    }
-                    // Check if the shift exists
-                    const existingCategory = await myCategoriesModel.findOne({ category: category, Balance: "PayOut" });
-                    if (!existingCategory) {
-                        let payOutCat = {}; //THE NEW DOCUMEN
-                        payOutCat["category"] = category;
-                        payOutCat["CategoryLimit"] = 0;
-                        payOutCat["CategoryLimitRange"] = "";
-                        payOutCat["Balance"] = "PayOut";
-                        // If the category doesn't exist, insert the new record
-                        await saveCategoryToDb(payOutCat)
-
-                    }
-                }
-
+            const rowData = {
+                CashFlowDate: correctFormattedDate, //RE VALIDATE JUST TO BE SURE
+                CashFlowType: type,
+                CashFlowShift: shift,
+                CashFlowInvoiceRef: invoiceNo,
+                CashFlowDescription: description || `Unknown ${type}`,
+                CashFlowCategory: category || 'suspense',
+                CashFlowCurrency: currency || baseCurrency.Currency_Name,
+                CashFlowAmount: amount,
+                CashFlowRate: theRate,
+                CashFlowCashEquiv: cashEquivValue,
             }
 
-            for (let i = 0; i < itemsToProcess.length; i++) {
-                const data = itemsToProcess[i];
-                if (checkTemplateStatus === 'loyverseHeaders') {
-                    date = data.Date; shift = "Shift" + data.Shiftnumber + " " + data.POS;
-                    type = data.Type; invoiceNo = ''; currency = ''; category = 'suspense';
-                    description = data.Comment;
-                    amount = data.Amount; rate = 0
-                    //call the function that populates the arrays
-                    await populateArrays(date, shift, invoiceNo, description, currency, category, amount, rate)
+            // Conditionally add the Tax field if checkTemplateStatus is 'loyverseHeaders'
+            if (checkTemplateStatus === 'loyverseHeaders' || (checkTemplateStatus === 'slyRetailHeaders' && id === '')) {
+                rowData.Tax = {
+                    vat: { QRCode: "", DeviceId: 0, ZimraFsNo: '', VatNumber: 0, TinNumber: 0, VatAmount: 0, VatStatus: "N" }, ztf: { First: '', Second: '', LevyAmount: 0, ZtfStatus: "N" }
+                }
+            }
+            // Check if the shift exists
+            if (checkTemplateStatus === 'loyverseHeaders') {
+                const existingShift = await myCashflowModel.findOne({ CashFlowShift: shift, CashFlowType: type });
+                if (!existingShift) {
+                    if (type === 'Pay in') {
+                        payInRowDataArray.push(rowData);
+                    }
+                    else if (type === 'Payout') {
+                        payOutRowDataArray.push(rowData);
+                    }
 
                 }
-                if (checkTemplateStatus === 'slyRetailHeaders') {
-                    if (data.Id === '') {
-                        id = data.Id
-                        date = data.Date; shift = data.ShiftNo; type = data.Type; invoiceNo = data.InvoiceRef;
-                        description = data.Description; currency = data.Currency; category = data.Category;
-                        amount = data.Amount; rate = data.Rate
-                        await populateArrays(date, shift, invoiceNo, description, currency, category, amount, rate)
+            }
+            else {
+                //TO STOP DUPLICATION OF DOCUMENTS IF THE SHIFT IS MISING,CHECK IF THE DOCUMENTS EXIST ALREADY BY CHECKING THE WHOLE DATE IF THERE IS ANY MATCH\
+                //IF SO,DO NOTHING ELSE ADD THE DOCUMENT TO THE ARRAY
+                const matchingDoc = await findMatchingDocument(rowData);
+                if (matchingDoc) {
 
+                } else {
+
+                    if (type === 'Pay in') {
+                        payInRowDataArray.push(rowData);
                     }
-                    else if (data.Id !== '') {
-                        try {
-                            // Check if the shift exists
-                            const existingCategory = await myCategoriesModel.findOne({ category: data.Category });
-                            if (!existingCategory) {
-                                let payOutCat = {}; //THE NEW DOCUMEN
-                                payOutCat["category"] = data.Category;
-                                payOutCat["CategoryLimit"] = 0;
-                                payOutCat["CategoryLimitRange"] = "";
-                                payOutCat["Balance"] = "PayOut";
-                                // If the category doesn't exist, insert the new record
-                                await saveCategoryToDb(payOutCat)
-                            }
-                            const relativeRate = data.Rate / baseCurrency.RATE;
-                            const cashEquivValue = Number(parseFloat(data.Amount) / parseFloat(relativeRate)).toFixed(2);
-                            // Update the existing document
-                            const result = await myCashflowModel.updateOne(
-                                { _id: ObjectId(data.Id) }, // Filter by _id
-                                {
-                                    $set: {
-                                        CashFlowDate: data.Date,
-                                        CashFlowShift: data.ShiftNo,
-                                        CashFlowInvoiceRef: data.InvoiceRef,
-                                        CashFlowDescription: data.Description,
-                                        CashFlowCategory: data.Category,
-                                        CashFlowCurrency: data.Currency,
-                                        CashFlowAmount: data.Amount,
-                                        CashFlowRate: data.Rate,
-                                        CashFlowCashEquiv: cashEquivValue,
-                                        CashFlowType: data.Type,
-                                    },
-                                }
-                            );
+                    else if (type === 'Payout') {
+                        payOutRowDataArray.push(rowData);
+                    }
+                }
+            }
+            // Check if the shift exists
+            let myType = ''
+            if (type === 'Pay in') {
+                myType = 'PayIn'
+            }
+            else {
+                myType = 'PayOut'
+            }
+            let allCategories = await myCategoriesModel.find({ Balance: myType }); // Get all categories from the database
+            const match = allCategories.some(doc => {
+                const categoryFromDb = doc.category.toLowerCase();  // Assuming 'category' is a field in your model
+                const categoryEnteredByUser = category.toLowerCase();  // Normalize user input
+                // Check if any letter from the user input exists in the category from the database
+                return categoryFromDb.includes(categoryEnteredByUser);
+            });
 
-                            // Check if the update was successful
-                            if (result.modifiedCount > 0) {
-                                isSaving = true;
-                                insertedDocuments.push(result.modifiedCount); // Store the count of updated documents
-                            } else {
-                                isSaving = false;
+            if (!match) {
+
+                let payInCat = {}; //THE NEW DOCUMEN
+                payInCat["category"] = category;
+                payInCat["CategoryLimit"] = 0;
+                payInCat["CategoryLimitRange"] = "";
+                payInCat["Balance"] = myType;
+                console.log(payInCat)
+                // If the category doesn't exist, insert the new record
+                await saveCategoryToDb(payInCat)
+            }
+        }
+
+        for (let i = 0; i < itemsToProcess.length; i++) {
+            const data = itemsToProcess[i];
+            if (checkTemplateStatus === 'loyverseHeaders') {
+                date = data.Date; shift = "Shift" + data.Shiftnumber + " " + data.POS;
+                type = data.Type; invoiceNo = ''; currency = ''; category = 'suspense';
+                description = data.Comment;
+                amount = data.Amount; rate = 0
+                //call the function that populates the arrays
+                await populateArrays(date, shift, invoiceNo, description, currency, category, amount, rate, type)
+            }
+
+            if (checkTemplateStatus === 'slyRetailHeaders') {
+                if (data.Id === '') {
+                    // id = data.Id
+                    date = data.Date; shift = data.ShiftNo; type = data.Type; invoiceNo = data.InvoiceRef;
+                    description = data.Description; currency = data.Currency; category = data.Category;
+                    amount = data.Amount; rate = data.Rate
+                    await populateArrays(date, shift, invoiceNo, description, currency, category, amount, rate, type)
+
+                }
+                else if (data.Id !== '') {
+
+                    try {
+                        let myType = ''
+                        if (data.Type === 'Pay in') {
+                            myType = 'PayIn'
+                        }
+                        else {
+                            myType = 'PayOut'
+                        }
+                        // Check if the shift exists
+                        let allCategories = await myCategoriesModel.find({ Balance: myType }); // Get all categories from the database
+                        const match = allCategories.some(doc => {
+                            const categoryFromDb = doc.category.toLowerCase();  // Assuming 'category' is a field in your model
+                            const categoryEnteredByUser = data.Category.toLowerCase();  // Normalize user input
+                            // Check if any letter from the user input exists in the category from the database
+                            return categoryFromDb.includes(categoryEnteredByUser);
+                        });
+
+                        if (!match) {
+                            let payOutCat = {}; //THE NEW DOCUMEN
+                            payOutCat["category"] = data.Category;
+                            payOutCat["CategoryLimit"] = 0;
+                            payOutCat["CategoryLimitRange"] = "";
+                            payOutCat["Balance"] = myType;
+                            // If the category doesn't exist, insert the new record
+                            await saveCategoryToDb(payOutCat)
+                        }
+                        const relativeRate = data.Rate / baseCurrency.RATE;
+                        const cashEquivValue = Number(parseFloat(data.Amount) / parseFloat(relativeRate)).toFixed(2);
+                        // Update the existing document
+                        const result = await myCashflowModel.updateOne(
+                            { _id: ObjectId(data.Id) }, // Filter by _id
+                            {
+                                $set: {
+                                    CashFlowDate: data.Date,
+                                    CashFlowShift: data.ShiftNo,
+                                    CashFlowInvoiceRef: data.InvoiceRef,
+                                    CashFlowDescription: data.Description,
+                                    CashFlowCategory: data.Category,
+                                    CashFlowCurrency: data.Currency,
+                                    CashFlowAmount: data.Amount,
+                                    CashFlowRate: data.Rate,
+                                    CashFlowCashEquiv: cashEquivValue,
+                                    CashFlowType: data.Type,
+                                },
                             }
-                        } catch (error) {
-                            console.error('Error updating document:', error);
+                        );
+
+                        // Check if the update was successful
+                        if (result.modifiedCount > 0) {
+                            isSaving = true;
+                            insertedDocuments.push(result.modifiedCount); // Store the count of updated documents
+                        } else {
                             isSaving = false;
                         }
-                    }
-                }
-            }
-            const operations = [];
-            console.log(payOutRowDataArray.length + 'payout to connect to db and save in populate payin' + payInRowDataArray.length)
-
-            // Insert Pay In Data using bulkWrite
-            payInRowDataArray.forEach(item => {
-                operations.push({
-                    insertOne: {
-                        document: item
-                    }
-                });
-            });
-
-            // Insert Pay Out Data using bulkWrite
-            payOutRowDataArray.forEach(item => {
-                operations.push({
-                    insertOne: {
-                        document: item
-                    }
-                });
-            });
-
-            // Perform the bulk insert operation for both Pay In and Pay Out data
-            console.log('operation' + operations.length)
-            if (operations.length > 0) {
-                const result = await myCashflowModel.bulkWrite(operations);
-                isSaving = true
-                // If you need the actual inserted documents, you can retrieve them from the result by using their IDs
-                // insertedDocuments = await myCashflowModel.find();
-                // Extract the IDs of the inserted documents
-                const insertedIds = Object.values(result.insertedIds);
-
-                // Retrieve the inserted documents using their IDs
-                insertedDocuments = await myCashflowModel.find({ _id: { $in: insertedIds } });
-
-            } else {
-                // return { isSaving: false, insertedDocuments: [] };
-            }
-            //then save any new categories
-            async function saveCategoryToDb(categoryData) {
-                try {
-                    const categoryEntry = new myCategoriesModel(categoryData);
-                    try {
-                        const result = await categoryEntry.save();
-                        if (result) {
-
-                            isSaving = true;
-                            insertedCategories.push(result); // Store the successfully inserted document
-                        }
-                    } catch (saveError) {
-                        console.error('Error saving cash flow entry:', saveError);
+                    } catch (error) {
+                        console.error('Error updating document:', error);
                         isSaving = false;
                     }
-
-                } catch (error) {
-                    console.error('Error inserting documents:', error);
-                    // return { isSaving: false };
                 }
             }
-
-            return { isSaving, insertedDocuments, insertedCategories }
         }
+
+        const operations = [];
+
+        // Insert Pay In Data using bulkWrite
+        payInRowDataArray.forEach(item => {
+            operations.push({
+                insertOne: {
+                    document: item
+                }
+            });
+        });
+
+        // Insert Pay Out Data using bulkWrite
+        payOutRowDataArray.forEach(item => {
+            operations.push({
+                insertOne: {
+                    document: item
+                }
+            });
+        });
+
+        // Perform the bulk insert operation for both Pay In and Pay Out data
+        if (operations.length > 0) {
+            const result = await myCashflowModel.bulkWrite(operations);
+            isSaving = true
+            // If you need the actual inserted documents, you can retrieve them from the result by using their IDs
+            // insertedDocuments = await myCashflowModel.find();
+            // Extract the IDs of the inserted documents
+            const insertedIds = Object.values(result.insertedIds);
+
+            // Retrieve the inserted documents using their IDs
+            insertedDocuments = await myCashflowModel.find({ _id: { $in: insertedIds } });
+
+        } else {
+            // return { isSaving: false, insertedDocuments: [] };
+        }
+        //then save any new categories
+
+        async function saveCategoryToDb(categorToDb) {
+            try {
+                const categoryEntry = new myCategoriesModel(categorToDb);
+                try {
+                    const result = await categoryEntry.save();
+                    if (result) {
+                        isSaving = true;
+                        insertedCategories.push(result); // Store the successfully inserted document
+                    }
+                } catch (saveError) {
+                    console.error('Error saving cash flow entry:', saveError);
+                    isSaving = false;
+                }
+            } catch (error) {
+                console.error('Error inserting documents:', error);
+                // return { isSaving: false };
+            }
+        }
+        return { isSaving, insertedDocuments, insertedCategories }
     } catch (error) {
         console.error('Error inserting documents:', error);
-        return { isSaving: false, insertedDocuments: [] };
+        return { isSaving: 'Failed to upload.Try again', insertedDocuments: [] };
     }
 }
+
 //====================================================================================================================
 export async function saveCashFlowData(req, itemsToProcess, sessionId) {
     try {
@@ -1151,3 +1155,4 @@ export async function updateCashFlowData(req, itemsToProcess, sessionId) {
         return { amUpdated: false, updatedDocuments: [] };
     }
 }
+
