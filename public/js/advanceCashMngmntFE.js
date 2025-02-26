@@ -28,7 +28,6 @@ fetch('/currencies')
                 fetch('/getAdvHeaderStatus')
                     .then(response => response.json())
                     .then(advancedHeaderStatus => {
-
                         advancedHeaderStatus.forEach((stat) => {
                             headersStatus.push(stat);
                         });
@@ -48,13 +47,20 @@ fetch('/currencies')
                         }
                         function removeContainerBlocks() {
                             document.querySelector(".loader-container").style.display = "none";
-                            document.querySelector(".theLoader").style.display = "flex";
-                            spinner.style.display = "block";
                             document.querySelector(".icon-nav").style.display = "block";
                             document.querySelector(".toolbar").style.display = "block";
                             document.getElementById("chartContainer").style.display = "none";
                             document.querySelector(".card1").style.display = "none";
                             document.querySelector(".main-card-second").style.display = "none";
+
+                        }
+                        function defaultdisplayContainerBlocks() {
+                            document.querySelector(".loader-container").style.display = "none";
+                            document.querySelector(".icon-nav").style.display = "block";
+                            document.querySelector(".toolbar").style.display = "block";
+                            document.getElementById("chartContainer").style.display = "none";
+                            document.querySelector(".card1").style.display = "block";
+                            document.querySelector(".main-card-second").style.display = "block";
 
                         }
                         //=========================================================================================
@@ -65,19 +71,6 @@ fetch('/currencies')
                         const deleteModal = document.querySelector('.deleteModal');
                         // Get the "Delete" button element in the modal
                         const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
-                        //=======================================================================================
-                        //THEPAYIN AND PAYOUT BOXES CLICK EVENTLISTENER
-                        // const incomeBox = document.getElementById('incomeBox');
-                        // incomeBox.addEventListener('click', () => {
-                        //     // Redirect to the template file download link
-                        //     location.href = '/payIn';
-                        // });
-                        // const expenseBox = document.getElementById('expenseBox');
-                        // expenseBox.addEventListener('click', () => {
-                        //     // Redirect to the template file download link
-                        //     location.href = '/payOut';
-                        // });
-                        const editBtn = document.querySelector('.editBtn');
                         //=======================================================================================
                         //FUNCTION TO TRUNCATE(KUGURA LONG TEXT TICHIZOISA MA DOTS)
                         function truncateText(text, maxLength) {
@@ -125,7 +118,7 @@ fetch('/currencies')
                             endDate = new Date(eDate)
                         }
                         //style the edit and export button on pagee reload
-                        document.querySelector(".editBtn").classList.add('editBtnStyle')
+                        // document.querySelector(".editBtn").classList.add('editBtnStyle')
                         //===================================================================================
                         const canvas = document.getElementById('myChart')
                         const myStyle =
@@ -229,7 +222,7 @@ fetch('/currencies')
                             // Add header row to the CSV array
                             const headerRow = [];
                             const editMode = localStorage.getItem('editMode')
-                            if (editMode !== null) {
+                            if (editMode === null) {
                                 pageSize = localStorage.getItem('advItemsPerPage');
                                 if (pageSize === null) {
                                     pageSize = 5
@@ -313,7 +306,7 @@ fetch('/currencies')
                                     })
                             }
 
-                            else if (editMode === null) {
+                            else if (editMode !== null) {
                                 const headerCols = document.querySelectorAll('#shift-list-table th');
 
                                 headerCols.forEach(function (headerCol) {
@@ -499,6 +492,7 @@ fetch('/currencies')
                         }
                         // addNewRow()
                         function addNewRow() {
+
                             const tBody = document.querySelector('.tableBody');
                             const numRows = tBody.rows.length;
 
@@ -841,14 +835,14 @@ fetch('/currencies')
                             const amountCell = document.createElement('td');
 
                             amountCell.classList.add('amount-cell');
-                            const amountSpan = document.createElement('span');
-                            amountSpan.classList.add('expAmount');
-                            // amountSpan.contentEditable = true;
-                            const symbolSpan1 = document.createElement('span');
-                            symbolSpan1.classList.add('symbol1');
-                            symbolSpan1.innerHTML = baseCurrCode
-                            amountCell.appendChild(symbolSpan1);
-                            amountCell.appendChild(amountSpan);
+                            // const amountSpan = document.createElement('span');
+                            // amountCell.classList.add('expAmount');
+                            amountCell.contentEditable = true;
+                            // const symbolSpan1 = document.createElement('span');
+                            // symbolSpan1.classList.add('symbol1');
+                            // symbolSpan1.innerHTML = baseCurrCode
+                            // amountCell.appendChild(symbolSpan1);
+                            // amountCell.appendChild(amountSpan);
                             newEmptyRow.appendChild(amountCell);
 
                             const rateCell = document.createElement('td');
@@ -909,7 +903,9 @@ fetch('/currencies')
                         }
 
                         //EDIT MODE OPERATIONS
+                        const editBtn = document.querySelector('.editBtn');
                         editBtn.addEventListener('click', function (event) {
+                            event.preventDefault()
                             if (editBtn.textContent === 'Edit') {
                                 //load the loader here
                                 displaySpinner()
@@ -917,7 +913,7 @@ fetch('/currencies')
                                 //display the import button
                                 document.querySelector('.importContainer').style.display = 'block';
                                 //remove the class with the default style
-                                document.querySelector(".editBtn").classList.remove('editBtnStyle')
+                                // document.querySelector(".editBtn").classList.remove('editBtnStyle')
                                 //now display the colums icon
                                 document.querySelector('.columns').style.display = 'block'
                                 //do remove the graph section
@@ -932,9 +928,9 @@ fetch('/currencies')
                                 const table = document.querySelector('.shiftListTable');
                                 const thead = document.querySelector('.shift-list-headings');
                                 //create headers row
-                                // create a new row element
                                 const headersRow = document.createElement('tr');
                                 headersRow.classList.add('shift-list-row');
+                                headersRow.id = ('shift-list-rowId1')
                                 const checkboxHeader = document.createElement('th');
                                 const checkbox1 = document.createElement('input');
                                 checkbox1.type = 'checkbox';
@@ -961,12 +957,39 @@ fetch('/currencies')
                                 const shiftHeader = document.createElement('th');
                                 shiftHeader.innerHTML = 'ShiftNo';
                                 headersRow.appendChild(shiftHeader);
+                                // THIS NOW ONLY WILL MAKE THE TD APPEAR OR DISAPPEAR
+                                const shiftstatus = Array.from(headersStatus).find(name => name.HeaderName === 'ShiftNo');
+                                if ((shiftstatus.isDisplayed == true)) {
+                                    //MAKE THE TD VISIBLE
+                                    shiftHeader.style.display = 'table-cell'
+                                } else {
+                                    if ((shiftstatus.isDisplayed == false)) {
+                                        //MAKE THE TD INVISIBLE
+                                        shiftHeader.style.display = 'none'
+                                    }
+                                }
                                 const vatHeader = document.createElement('th');
                                 vatHeader.innerHTML = 'Tax';
                                 headersRow.appendChild(vatHeader);
+                                const radiostatus = Array.from(headersStatus).find(name => name.HeaderName === 'Tax');
+                                if ((radiostatus.isDisplayed === true)) {
+                                    vatHeader.style.display = 'table-cell'
+
+                                }
+                                else if (radiostatus.isDisplayed == false) {
+                                    vatHeader.style.display = 'none'
+
+                                }
                                 const invoiceHeader = document.createElement('th');
                                 invoiceHeader.innerHTML = 'InvoiceRef';
                                 headersRow.appendChild(invoiceHeader);
+                                const invoiceStatus = Array.from(headersStatus).find(name => name.HeaderName === 'InvoiceRef');
+                                if ((invoiceStatus.isDisplayed === true)) {
+                                    invoiceHeader.style.display = 'table-cell'
+                                }
+                                else if (invoiceStatus.isDisplayed == false) {
+                                    invoiceHeader.style.display = 'none'
+                                }
                                 const descriptionHeader = document.createElement('th');
                                 descriptionHeader.innerHTML = 'Description';
                                 headersRow.appendChild(descriptionHeader);
@@ -993,20 +1016,34 @@ fetch('/currencies')
                                 cashEquivHeaderText.innerText = '(Relative to ' + baseCurrCode + ')'
                                 cashEquivHeader.appendChild(cashEquivHeaderText);
                                 headersRow.appendChild(cashEquivHeader);
+                                const cashstatus = Array.from(headersStatus).find(name => name.HeaderName === 'CashEquiv');
+                                if ((cashstatus.isDisplayed === true)) {
+                                    cashEquivHeader.style.display = 'table-cell'
+
+                                }
+                                else if (cashstatus.isDisplayed == false) {
+                                    cashEquivHeader.style.display = 'none'
+                                }
                                 const runningBalHeader = document.createElement('th');
                                 runningBalHeader.innerHTML = 'RunningBalance';
                                 headersRow.appendChild(runningBalHeader);
-
+                                const profitStatus = Array.from(headersStatus).find(name => name.HeaderName === 'RunningBalance');
+                                if ((profitStatus.isDisplayed === true)) {
+                                    runningBalHeader.style.display = 'table-cell'
+                                }
+                                else if (profitStatus.isDisplayed == false) {
+                                    runningBalHeader.style.display = 'none'
+                                }
                                 thead.appendChild(headersRow)
                                 //NOW CREATE A NEW TABLE WITH NEW HEADINGS
                                 const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
                                 const eDate = localStorage.getItem('lastDate');
                                 let startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
                                 let endDate = new Date(eDate);
+
                                 defaultDisplayContent2(startDate, endDate)
-                                //SAVE THE STATUS OF EDIT BUTTON IN LOCAL STORAGE
-                                isEditMode = true
-                                localStorage.setItem('editMode', isEditMode)
+
+
                                 //CHANGE THE TEXT OF EDUT BUTTON TO VISUALS so that user can click to go back ku graph
                                 editBtn.textContent = 'Visuals'
                                 //GET THE SEARCH INPUT IN LOCAL STORAGE
@@ -1016,8 +1053,38 @@ fetch('/currencies')
                                 document.querySelector('.searchBar').style.display = 'block'
                             }
                             else if (editBtn.textContent === 'Visuals') {
+                                //SAVE THE STATUS OF EDIT BUTTON IN LOCAL STORAGE
+                                isEditMode = true
+                                localStorage.setItem('editMode', isEditMode)
+                                displaySpinner()
+                                localStorage.removeItem('advCurrentPage')
+                                //CHANGE THE TEXT OF EDUT BUTTON TO VISUALS so that user can click to go back ku graph
+                                editBtn.textContent = 'Edit'
+                                //display the import button
+                                document.querySelector('.importContainer').style.display = 'none';
+                                //now display the colums icon
+                                document.querySelector('.columns').style.display = 'none'
+                                //do add the graph section
+                                document.querySelector('.second_card').style.display = 'block'
+
+                                //remove the table headers existing in the table
+                                // document.getElementById('shift-list-rowId1').style.display = 'none'
+                                const allTableRow = document.querySelectorAll('thead tr')
+                                for (let a = 0; a < allTableRow.length; a++) {
+                                    const tRow = allTableRow[a];
+                                    tRow.style.display = 'none'
+                                }
+
                                 //sort of reload the page to show the graph and it table
-                                location.href = 'advanceCashMngmnt';
+                                // location.href = 'advanceCashMngmnt';
+                                document.getElementById('shift-list-rowId').style.display = 'contents'
+
+                                const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                const eDate = localStorage.getItem('lastDate');
+                                let startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                let endDate = new Date(eDate);
+                                //call the first default display function
+                                defaultDisplayContent(startDate, endDate)
 
                             }
 
@@ -1211,7 +1278,7 @@ fetch('/currencies')
                         }
 
                         function currentCashFlowTable(totalPages, page, pageSize, itemsToProcess) {
-                            displayContainerBlocks()
+                            defaultdisplayContainerBlocks()
                             const allTableRow = document.querySelectorAll('.shiftRowss')
                             for (let a = 0; a < allTableRow.length; a++) {
                                 const tRow = allTableRow[a];
@@ -1688,8 +1755,8 @@ fetch('/currencies')
                                         }
                                         const profitCell = document.createElement('td');
                                         profitCell.classList.add('runningBalance');
-                                        const profitStatus = Array.from(headersStatus).find(name => name.HeaderName === 'RunningBalance');
                                         newEmptyRow.appendChild(profitCell);
+                                        const profitStatus = Array.from(headersStatus).find(name => name.HeaderName === 'RunningBalance');
                                         if ((profitStatus.isDisplayed === true)) {
                                             profitCell.style.display = 'table-cell'
                                         }
@@ -1724,558 +1791,683 @@ fetch('/currencies')
                             addNewRow()
                             document.getElementById('Table_messages').style.display = 'none'
                         })
+                        let isChecked = false
+                        let amChecked = false
+                        const selectioncheckboxes = document.querySelectorAll('.custom-control-input');
+
+                        const tableRows = document.querySelectorAll('.shiftListTable thead th'); // get all table rows
+
+                        headersStatus.forEach(status => {//loop in the status array database and check if the status is true
+                            if (status.isDisplayed === true) {//if so loop in the checkboxes and check them
+                                selectioncheckboxes.forEach(checkbox => {
+                                    if (status.HeaderName === checkbox.value) {
+                                        checkbox.checked = true;
+                                        isChecked = true
+                                        tableRows.forEach((row, index) => {
+                                            const headerName = row.innerText.replace(/[\n\u2191\u2193]/g, '').split(/[\(\{\"]/)[0].trim(); // get the text content of the header cell
+                                            if (status.isDisplayed === true) {
+                                                if (status.HeaderName === headerName) {
+                                                    if (index !== 1) {//DO NOT SHOW THE HIDDEN ID COLUMN
+                                                        row.style.display = 'table-cell';
+                                                    }
+                                                }
+                                            }
+                                        });
+                                    }
+                                })
+                            }
+                            else if (status.isDisplayed === false) {
+                                selectioncheckboxes.forEach(checkbox => {
+                                    if (status.HeaderName === checkbox.value) {
+                                        checkbox.checked = false;
+                                        isChecked = false
+                                        tableRows.forEach((row, index) => {
+                                            const headerName = row.innerText.replace(/[\n\u2191\u2193]/g, '').split(/[\(\{\"]/)[0].trim(); // get the text content of the header cell
+                                            if (isChecked === false) {
+                                                if (status.HeaderName === headerName) {
+                                                    if (index !== 1) {//DO NOT SHOW THE HIDDEN ID COLUMN
+                                                        row.style.display = 'none';
+                                                    }
+                                                }
+                                            }
+                                        });
+                                    }
+
+                                })
+                            }
+                        });
+
+
+                        //OPERATIONS WHEN USER CHECKS OR UNCHECK CHECKBOXES
+                        //add event listener on each tickable checkbox
+                        const shiftCheckbox = document.getElementById('checkbox-id-shift');
+                        const vatCheckbox = document.getElementById('checkbox-id-vat');
+                        const invoiceCheckbox = document.getElementById('checkbox-id-invoice');
+                        const categoryCheckbox = document.getElementById('checkbox-id-category');
+                        const cashEquivCheckbox = document.getElementById('checkbox-id-cashEquiv');
+                        const BalanceCheckbox = document.getElementById('checkbox-id-balance');
+                        let headerisDisplayed = ""
+                        let headerNamefcb = ""
+
+                        //WHEN THE USER CLICKS ON SHIFT CHECKBOX
+                        shiftCheckbox.addEventListener('click', () => {
+                            if (shiftCheckbox.checked === true) {
+                                shiftCheckbox.checked = true;
+                                const tableHeaders = document.querySelectorAll('.shiftListTable thead th'); // get all table headers
+                                tableHeaders.forEach((theader, index) => {
+                                    headerNamefcb = theader.innerText.replace(/[\n\u2191\u2193]/g, '').split(/[\(\{\"]/)[0].trim(); // get the text content of the header cell
+                                    if ("ShiftNo" === headerNamefcb) {
+                                        if (index !== 1) {//DO NOT SHOW THE HIDDEN ID COLUMN
+                                            theader.style.display = 'table-cell';
+                                            headerisDisplayed = true
+                                            //NOW LOOP IN THE HEADERSTATUS ARRAY UPDATING THE ISDISPLAYED VALUE
+                                            for (let i = 0; i < headersStatus.length; i++) {
+                                                if (headersStatus[i].HeaderName === 'ShiftNo') {
+                                                    headersStatus[i].isDisplayed = true;
+                                                }
+                                            }
+                                            //THEN ALSO THE TDs SHOULD BE TRUE
+                                            //GET ALL THE TD IN THE TABLE UNDER SHIFT 
+                                            const myTableColumns = document.querySelectorAll('.editableShift'); // get shift table rows
+                                            myTableColumns.forEach(column => {
+                                                column.style.display = 'table-cell'//LOOP DISPLAYING THE TDS
+                                            });
+                                            //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE SHIFT STATUS NOT THE ENTIRE COLLECTION
+                                            spinner.style.display = 'block'//display progress bar
+                                            fetch('/updateHeaderStatusAdv', { //THIS IS AN API END POINT TO CARRY THE VARIABLE NAMES TO ANOTHER JS MODULE WHICH WILL BE THE SEVER
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json'
+                                                },
+                                                body: JSON.stringify({
+                                                    headerNamefcb,
+                                                    headerisDisplayed,
+                                                    sessionId
+                                                })
+                                            })
+                                                .then(response => response.json())
+                                                .then(data => {
+                                                    // Show alert
+                                                    if (data.isSaving === true) {//get the isSaving variable form the server 
+                                                        spinner.style.display = 'none'//remove progress bar
+                                                        notification('Updated')
+                                                    }
+                                                    else {
+                                                        notification("Not updated..error occured");
+
+                                                    }
+
+                                                })
+
+                                                .catch(error => {
+                                                    console.error(`Error updating Date field `, error);
+                                                });
+
+
+                                        }
+
+                                    }
+                                });
+                            }
+                            else if (shiftCheckbox.checked === false) {
+                                shiftCheckbox.checked = false;
+                                isChecked = false
+                                const tableHeaders = document.querySelectorAll('.shiftListTable thead th'); // get all table rows
+                                tableHeaders.forEach((theader, index) => {
+                                    headerNamefcb = theader.innerText.replace(/[\n\u2191\u2193]/g, '').split(/[\(\{\"]/)[0].trim(); // get the text content of the header cell
+                                    if ("ShiftNo" === headerNamefcb) {
+                                        if (index !== 1) {//DO NOT SHOW THE HIDDEN ID COLUMN
+                                            theader.style.display = 'none';
+                                            //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE SHIFT STATUS NOT THE ENTIRE COLLECTION
+                                            headerisDisplayed = false
+                                            //NOW LOOP IN THE HEADERSTATUS ARRAY UPDATING THE ISDISPLAYED VALUE
+                                            for (let i = 0; i < headersStatus.length; i++) {
+                                                if (headersStatus[i].HeaderName === 'ShiftNo') {
+                                                    headersStatus[i].isDisplayed = false;
+                                                }
+                                            }
+                                            //GET ALL THE TD IN THE TABLE UNDER SHIFT 
+                                            const myTableColumns = document.querySelectorAll('.editableShift'); // get shift table rows
+                                            myTableColumns.forEach(column => {
+                                                column.style.display = 'none' //LOOP REMOVING THE TDS
+                                            });
+                                            //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE SHIFT STATUS NOT THE ENTIRE COLLECTION
+                                            spinner.style.display = 'block'//display progress bar
+                                            fetch('/updateHeaderStatusAdv', { //THIS IS AN API END POINT TO CARRY THE VARIABLE NAMES TO ANOTHER JS MODULE WHICH WILL BE THE SEVER
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json'
+                                                },
+                                                body: JSON.stringify({
+                                                    headerNamefcb,
+                                                    headerisDisplayed,
+                                                    sessionId
+                                                })
+                                            })
+                                                .then(response => response.json())
+                                                .then(data => {
+                                                    // Show alert
+                                                    if (data.isSaving === true) {
+                                                        spinner.style.display = 'none'//remove progress bar
+                                                        notification('Updated')
+                                                    }
+                                                    else {
+                                                        notification("Not updated..error occured");
+
+                                                    }
+                                                })
+
+                                                .catch(error => {
+                                                    console.error(`Error updating Date field `, error);
+                                                });
+
+
+                                        }
+                                    }
+                                });
+                            }
+                        })
+                        //WHEN THE USER CLICKS ON VAT CHECKBOX
+                        vatCheckbox.addEventListener('click', () => {
+                            if (vatCheckbox.checked === true) {
+                                vatCheckbox.checked = true;
+                                const tableHeaders = document.querySelectorAll('.shiftListTable thead th'); // get all table headers
+                                tableHeaders.forEach((theader, index) => {
+                                    headerNamefcb = theader.innerText.replace(/[\n\u2191\u2193]/g, '').split(/[\(\{\"]/)[0].trim(); // get the text content of the header cell
+                                    if ("Tax" === headerNamefcb) {
+                                        if (index !== 1) {//DO NOT SHOW THE HIDDEN ID COLUMN
+                                            theader.style.display = 'table-cell';
+                                            headerisDisplayed = true
+                                            //NOW LOOP IN THE HEADERSTATUS ARRAY UPDATING THE ISDISPLAYED VALUE
+                                            for (let i = 0; i < headersStatus.length; i++) {
+                                                if (headersStatus[i].HeaderName === 'Tax') {
+
+                                                    headersStatus[i].isDisplayed = true;
+                                                    break; // Assuming there is only one object with 'ShiftNo', exit the loop after updating
+                                                }
+                                            }
+
+                                            //THEN ALSO THE TDs SHOULD BE TRUE
+                                            //GET ALL THE TD IN THE TABLE UNDER VAT 
+                                            const myTableColumns = document.querySelectorAll('.radioBtn'); // get shift table rows
+                                            myTableColumns.forEach(column => {
+                                                column.style.display = 'table-cell'//LOOP DISPLAYING THE TDS
+                                            });
+                                            //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE VAT STATUS NOT THE ENTIRE COLLECTION
+                                            spinner.style.display = 'block'//display progress bar
+                                            fetch('/updateHeaderStatusAdv', { //THIS IS AN API END POINT TO CARRY THE VARIABLE NAMES TO ANOTHER JS MODULE WHICH WILL BE THE SEVER
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json'
+                                                },
+                                                body: JSON.stringify({
+                                                    headerNamefcb,
+                                                    headerisDisplayed,
+                                                    sessionId
+                                                })
+                                            })
+                                                .then(response => response.json())
+                                                .then(data => {
+                                                    // Show alert
+                                                    if (data.isSaving === true) {
+                                                        notification('Updated')
+                                                        spinner.style.display = 'none'//remove progress bar
+                                                    }
+                                                    else {
+                                                        notification("Not updated..error occured");
+
+                                                    }
+
+                                                })
+
+                                                .catch(error => {
+                                                    console.error(`Error updating Date field `, error);
+                                                });
+
+
+                                        }
+
+                                    }
+                                });
+                            }
+                            else if (vatCheckbox.checked === false) {
+                                vatCheckbox.checked = false;
+                                isChecked = false
+                                const tableHeaders = document.querySelectorAll('.shiftListTable thead th'); // get all table rows
+                                tableHeaders.forEach((theader, index) => {
+                                    headerNamefcb = theader.innerText.replace(/[\n\u2191\u2193]/g, '').split(/[\(\{\"]/)[0].trim(); // get the text content of the header cell
+                                    if ("Tax" === headerNamefcb) {
+                                        if (index !== 1) {//DO NOT SHOW THE HIDDEN ID COLUMN
+                                            theader.style.display = 'none';
+                                            //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE SHIFT STATUS NOT THE ENTIRE COLLECTION
+                                            headerisDisplayed = false
+                                            //NOW LOOP IN THE HEADERSTATUS ARRAY UPDATING THE ISDISPLAYED VALUE
+                                            for (let i = 0; i < headersStatus.length; i++) {
+                                                if (headersStatus[i].HeaderName === 'Tax') {
+                                                    headersStatus[i].isDisplayed = false;
+                                                    break; // Assuming there is only one object with 'ShiftNo', exit the loop after updating
+                                                }
+                                            }
+                                            //GET ALL THE TD IN THE TABLE UNDER VAT 
+                                            const myTableColumns = document.querySelectorAll('.radioBtn'); // get shift table rows
+                                            myTableColumns.forEach(column => {
+                                                column.style.display = 'none'//LOOP HIDDING THE TDS
+                                            });
+                                            //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE SHIFT STATUS NOT THE ENTIRE COLLECTION
+                                            spinner.style.display = 'block'//display progress bar
+                                            fetch('/updateHeaderStatusAdv', { //THIS IS AN API END POINT TO CARRY THE VARIABLE NAMES TO ANOTHER JS MODULE WHICH WILL BE THE SEVER
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json'
+                                                },
+                                                body: JSON.stringify({
+                                                    headerNamefcb,
+                                                    headerisDisplayed,
+                                                    sessionId
+                                                })
+                                            })
+                                                .then(response => response.json())
+                                                .then(data => {
+                                                    // Show alert
+                                                    if (data.isSaving === tru) {
+
+                                                        spinner.style.display = 'none'//remove progress bar
+                                                        notification('Updated')
+
+                                                    }
+                                                    else {
+                                                        notification("Not updated..error occured");
+
+                                                    }
+
+                                                })
+
+                                                .catch(error => {
+                                                    console.error(`Error updating Date field `, error);
+                                                });
+
+
+                                        }
+                                    }
+                                });
+                            }
+                        })
+
+                        //WHEN THE USER CLICKS ON INVOICE CHECKBOX
+                        invoiceCheckbox.addEventListener('click', () => {
+                            if (invoiceCheckbox.checked === true) {
+                                invoiceCheckbox.checked = true;
+                                const tableHeaders = document.querySelectorAll('.shiftListTable thead th'); // get all table headers
+                                tableHeaders.forEach((theader, index) => {
+                                    headerNamefcb = theader.innerText.replace(/[\n\u2191\u2193]/g, '').split(/[\(\{\"]/)[0].trim(); // get the text content of the header cell
+                                    if ("InvoiceRef" === headerNamefcb) {
+                                        if (index !== 1) {//DO NOT SHOW THE HIDDEN ID COLUMN
+                                            theader.style.display = 'table-cell';
+                                            headerisDisplayed = true
+                                            //NOW LOOP IN THE HEADERSTATUS ARRAY UPDATING THE ISDISPLAYED VALUE
+                                            for (let i = 0; i < headersStatus.length; i++) {
+                                                if (headersStatus[i].HeaderName === 'InvoiceRef') {
+                                                    headersStatus[i].isDisplayed = true;
+                                                    break; // Assuming there is only one object with 'ShiftNo', exit the loop after updating
+                                                }
+                                            }
+                                            console.log(headersStatus)
+                                            //THEN ALSO THE TDs SHOULD BE TRUE
+                                            //GET ALL THE TD IN THE TABLE UNDER INVOICE 
+                                            const myTableColumns = document.querySelectorAll('.editableInvoice'); // get shift table rows
+
+                                            myTableColumns.forEach(column => {
+                                                column.style.display = 'table-cell'//LOOP DISPLAYING THE TDS
+                                            });
+                                            //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE SHIFT STATUS NOT THE ENTIRE COLLECTION
+                                            spinner.style.display = 'block'//display progress bar
+                                            fetch('/updateHeaderStatusAdv', { //THIS IS AN API END POINT TO CARRY THE VARIABLE NAMES TO ANOTHER JS MODULE WHICH WILL BE THE SEVER
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json'
+                                                },
+                                                body: JSON.stringify({
+                                                    headerNamefcb,
+                                                    headerisDisplayed,
+                                                    sessionId
+                                                })
+                                            })
+                                                .then(response => response.json())
+                                                .then(data => {
+                                                    // Show alert
+                                                    if (data.isSaving === true) {
+
+                                                        spinner.style.display = 'none'//remove progress bar
+                                                        notification('Updated')
+
+                                                    }
+                                                    else {
+                                                        notification("Not updated..error occured");
+
+                                                    }
+                                                })
+
+                                                .catch(error => {
+                                                    console.error(`Error updating Date field `, error);
+                                                });
+
+                                        }
+
+                                    }
+                                });
+                            }
+                            else if (invoiceCheckbox.checked === false) {
+                                invoiceCheckbox.checked = false;
+                                isChecked = false
+                                const tableHeaders = document.querySelectorAll('.shiftListTable thead th'); // get all table rows
+                                tableHeaders.forEach((theader, index) => {
+                                    headerNamefcb = theader.innerText.replace(/[\n\u2191\u2193]/g, '').split(/[\(\{\"]/)[0].trim(); // get the text content of the header cell
+                                    if ("InvoiceRef" === headerNamefcb) {
+                                        if (index !== 1) {//DO NOT SHOW THE HIDDEN ID COLUMN
+                                            theader.style.display = 'none';
+                                            //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE SHIFT STATUS NOT THE ENTIRE COLLECTION
+                                            headerisDisplayed = false
+                                            //NOW LOOP IN THE HEADERSTATUS ARRAY UPDATING THE ISDISPLAYED VALUE
+                                            for (let i = 0; i < headersStatus.length; i++) {
+                                                if (headersStatus[i].HeaderName === 'InvoiceRef') {
+                                                    headersStatus[i].isDisplayed = false;
+                                                }
+                                            }
+                                            //GET ALL THE TD IN THE TABLE UNDER invoice 
+                                            const myTableColumns = document.querySelectorAll('.editableInvoice'); // get invoice table rows
+
+                                            myTableColumns.forEach(column => {
+                                                column.style.display = 'none'//LOOP HIDDING THE TDS
+                                            });
+                                            //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE SHIFT STATUS NOT THE ENTIRE COLLECTION
+                                            spinner.style.display = 'block'//display progress bar
+                                            fetch('/updateHeaderStatusAdv', { //THIS IS AN API END POINT TO CARRY THE VARIABLE NAMES TO ANOTHER JS MODULE WHICH WILL BE THE SEVER
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json'
+                                                },
+                                                body: JSON.stringify({
+                                                    headerNamefcb,
+                                                    headerisDisplayed,
+                                                    sessionId
+                                                })
+                                            })
+                                                .then(response => response.json())
+                                                .then(data => {
+                                                    // Show alert
+                                                    if (data.isSaving === true) {
+
+                                                        spinner.style.display = 'none'//remove progress bar
+                                                        notification('Updated')
+
+                                                    } else {
+                                                        notification("Not updated..error occured");
+
+                                                    }
+
+                                                })
+
+                                                .catch(error => {
+                                                    console.error(`Error updating Date field `, error);
+                                                });
+
+                                        }
+                                    }
+                                });
+                            }
+                        })
+
+
+                        //WHEN THE USER CLICKS ON cashequiv CHECKBOX
+                        cashEquivCheckbox.addEventListener('click', () => {
+                            if (cashEquivCheckbox.checked === true) {
+                                cashEquivCheckbox.checked = true;
+                                const tableHeaders = document.querySelectorAll('.shiftListTable thead th'); // get all table headers
+                                tableHeaders.forEach((theader, index) => {
+                                    headerNamefcb = theader.innerText.replace(/[\n\u2191\u2193]/g, '').split(/[\(\{\"]/)[0].trim(); // get the text content of the header cell
+                                    if ("CashEquiv" === headerNamefcb) {
+                                        if (index !== 1) {//DO NOT SHOW THE HIDDEN ID COLUMN
+                                            theader.style.display = 'table-cell';
+                                            headerisDisplayed = true
+                                            //NOW LOOP IN THE HEADERSTATUS ARRAY UPDATING THE ISDISPLAYED VALUE
+                                            for (let i = 0; i < headersStatus.length; i++) {
+                                                if (headersStatus[i].HeaderName === 'CashEquiv') {
+                                                    headersStatus[i].isDisplayed = true;
+                                                    break; // Assuming there is only one object with 'ShiftNo', exit the loop after updating
+                                                }
+                                            }
+                                            console.log(headersStatus)
+                                            //THEN ALSO THE TDs SHOULD BE TRUE
+                                            //GET ALL THE TD IN THE TABLE UNDER INVOICE 
+                                            const myTableColumns = document.querySelectorAll('.cashEquivClass'); // get shift table rows
+
+                                            myTableColumns.forEach(column => {
+                                                column.style.display = 'table-cell'//LOOP DISPLAYING THE TDS
+                                            });
+                                            //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE SHIFT STATUS NOT THE ENTIRE COLLECTION
+                                            spinner.style.display = 'block'//display progress bar
+                                            fetch('/updateHeaderStatusAdv', { //THIS IS AN API END POINT TO CARRY THE VARIABLE NAMES TO ANOTHER JS MODULE WHICH WILL BE THE SEVER
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json'
+                                                },
+                                                body: JSON.stringify({
+                                                    headerNamefcb,
+                                                    headerisDisplayed,
+                                                    sessionId
+                                                })
+                                            })
+                                                .then(response => response.json())
+                                                .then(data => {
+                                                    // Show alert
+                                                    if (data.isSaving === true) {
+                                                        spinner.style.display = 'none'//remove progress bar
+                                                        notification('Updated')
+
+                                                    }
+                                                    else {
+                                                        notification("Not updated..error occured");
+
+                                                    }
+                                                })
+
+                                                .catch(error => {
+                                                    console.error(`Error updating Date field `, error);
+                                                });
+
+                                        }
+
+                                    }
+                                });
+                            }
+                            else if (cashEquivCheckbox.checked === false) {
+                                cashEquivCheckbox.checked = false;
+                                isChecked = false
+                                const tableHeaders = document.querySelectorAll('.shiftListTable thead th'); // get all table rows
+                                tableHeaders.forEach((theader, index) => {
+                                    headerNamefcb = theader.innerText.replace(/[\n\u2191\u2193]/g, '').split(/[\(\{\"]/)[0].trim(); // get the text content of the header cell
+                                    if ("CashEquiv" === headerNamefcb) {
+                                        if (index !== 1) {//DO NOT SHOW THE HIDDEN ID COLUMN
+                                            theader.style.display = 'none';
+                                            //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE SHIFT STATUS NOT THE ENTIRE COLLECTION
+                                            headerisDisplayed = false
+                                            //NOW LOOP IN THE HEADERSTATUS ARRAY UPDATING THE ISDISPLAYED VALUE
+                                            for (let i = 0; i < headersStatus.length; i++) {
+                                                if (headersStatus[i].HeaderName === 'CashEquiv') {
+                                                    headersStatus[i].isDisplayed = false;
+                                                }
+                                            }
+                                            //GET ALL THE TD IN THE TABLE UNDER invoice 
+                                            const myTableColumns = document.querySelectorAll('.cashEquivClass'); // get invoice table rows
+
+                                            myTableColumns.forEach(column => {
+                                                column.style.display = 'none'//LOOP HIDDING THE TDS
+                                            });
+                                            //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE SHIFT STATUS NOT THE ENTIRE COLLECTION
+                                            spinner.style.display = 'block'//display progress bar
+                                            fetch('/updateHeaderStatusAdv', { //THIS IS AN API END POINT TO CARRY THE VARIABLE NAMES TO ANOTHER JS MODULE WHICH WILL BE THE SEVER
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json'
+                                                },
+                                                body: JSON.stringify({
+                                                    headerNamefcb,
+                                                    headerisDisplayed,
+                                                    sessionId
+                                                })
+                                            })
+                                                .then(response => response.json())
+                                                .then(data => {
+                                                    // Show alert
+                                                    if (data.isSaving === true) {
+
+                                                        spinner.style.display = 'none'//remove progress bar
+                                                        notification('Updated')
+
+                                                    } else {
+                                                        notification("Not updated..error occured");
+
+                                                    }
+
+                                                })
+
+                                                .catch(error => {
+                                                    console.error(`Error updating Date field `, error);
+                                                });
+
+                                        }
+                                    }
+                                });
+                            }
+                        })
+
+                        //WHEN THE USER CLICKS ON RUNNING BALANCE CHECKBOX
+                        BalanceCheckbox.addEventListener('click', () => {
+                            if (BalanceCheckbox.checked === true) {
+                                BalanceCheckbox.checked = true;
+                                const tableHeaders = document.querySelectorAll('.shiftListTable thead th'); // get all table headers
+                                tableHeaders.forEach((theader, index) => {
+                                    headerNamefcb = theader.innerText.replace(/[\n\u2191\u2193]/g, '').split(/[\(\{\"]/)[0].trim(); // get the text content of the header cell
+                                    if ("RunningBalance" === headerNamefcb) {
+                                        if (index !== 1) {//DO NOT SHOW THE HIDDEN ID COLUMN
+                                            theader.style.display = 'table-cell';
+                                            headerisDisplayed = true
+                                            //NOW LOOP IN THE HEADERSTATUS ARRAY UPDATING THE ISDISPLAYED VALUE
+                                            for (let i = 0; i < headersStatus.length; i++) {
+                                                if (headersStatus[i].HeaderName === 'RunningBalance') {
+                                                    headersStatus[i].isDisplayed = true;
+                                                }
+                                            }
+                                            //THEN ALSO THE TDs SHOULD BE TRUE
+                                            //GET ALL THE TD IN THE TABLE UNDER RUNNING BALANCE 
+                                            const myTableColumns = document.querySelectorAll('.runningBalance'); // get RUNNING BALANCE table rows
+
+                                            myTableColumns.forEach(column => {
+                                                column.style.display = 'table-cell'//LOOP DISPLAYING THE TDS
+                                            });
+                                            //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE RUNNING BALANCE STATUS NOT THE ENTIRE COLLECTION
+                                            spinner.style.display = 'block'//display progress bar
+                                            fetch('/updateHeaderStatusAdv', { //THIS IS AN API END POINT TO CARRY THE VARIABLE NAMES TO ANOTHER JS MODULE WHICH WILL BE THE SEVER
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json'
+                                                },
+                                                body: JSON.stringify({
+                                                    headerNamefcb,
+                                                    headerisDisplayed,
+                                                    sessionId
+                                                })
+                                            })
+                                                .then(response => response.json())
+                                                .then(data => {
+                                                    // Show alert
+                                                    if (data.isSaving === true) {
+
+                                                        spinner.style.display = 'none'//remove progress bar
+                                                        notification('Updated')
+
+                                                    }
+                                                    else {
+                                                        notification("Not updated..error occured");
+
+                                                    }
+
+                                                })
+
+                                                .catch(error => {
+                                                    console.error(`Error updating Date field `, error);
+                                                });
+
+
+                                        }
+
+                                    }
+                                });
+                            }
+                            else if (BalanceCheckbox.checked === false) {
+                                BalanceCheckbox.checked = false;
+                                isChecked = false
+                                const tableHeaders = document.querySelectorAll('.shiftListTable thead th'); // get all table rows
+                                tableHeaders.forEach((theader, index) => {
+                                    headerNamefcb = theader.innerText.replace(/[\n\u2191\u2193]/g, '').split(/[\(\{\"]/)[0].trim(); // get the text content of the header cell
+                                    if ("RunningBalance" === headerNamefcb) {
+                                        if (index !== 1) {//DO NOT SHOW THE HIDDEN ID COLUMN
+                                            theader.style.display = 'none';
+                                            //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE RUNNING BALANCE STATUS NOT THE ENTIRE COLLECTION
+                                            headerisDisplayed = false
+                                            //NOW LOOP IN THE HEADERSTATUS ARRAY UPDATING THE ISDISPLAYED VALUE
+                                            for (let i = 0; i < headersStatus.length; i++) {
+                                                if (headersStatus[i].HeaderName === 'RunningBalance') {
+                                                    headersStatus[i].isDisplayed = false;
+                                                }
+                                            }
+                                            //GET ALL THE TD IN THE TABLE UNDER CASH EQUIV 
+                                            const myTableColumns = document.querySelectorAll('.runningBalance'); // get RUNNING BALANCE table rows
+                                            myTableColumns.forEach(column => {
+                                                column.style.display = 'none'//LOOP HIDDING THE TDS
+                                            });
+                                            //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE RUNNING BALANCE STATUS NOT THE ENTIRE COLLECTION
+                                            spinner.style.display = 'block'//display progress bar
+                                            fetch('/updateHeaderStatusAdv', { //THIS IS AN API END POINT TO CARRY THE VARIABLE NAMES TO ANOTHER JS MODULE WHICH WILL BE THE SEVER
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json'
+                                                },
+                                                body: JSON.stringify({
+                                                    headerNamefcb,
+                                                    headerisDisplayed,
+                                                    sessionId
+                                                })
+                                            })
+                                                .then(response => response.json())
+                                                .then(data => {
+                                                    // Show alert
+                                                    if (data.isSaving === true) {
+
+                                                        spinner.style.display = 'none'//remove progress bar
+                                                        notification('Updated')
+
+                                                    }
+                                                    else {
+                                                        notification("Not updated..error occured");
+
+                                                    }
+
+                                                })
+
+                                                .catch(error => {
+                                                    console.error(`Error updating Date field `, error);
+                                                });
+
+
+                                        }
+                                    }
+                                });
+                            }
+                        })
                         function setEventListeners(newEmptyRow) {
                             //when the user selects what rows to display
-                            let isChecked = false
-                            let amChecked = false
-                            const selectioncheckboxes = document.querySelectorAll('.custom-control-input');
 
-                            const tableRows = document.querySelectorAll('.shiftListTable thead th'); // get all table rows
-
-                            headersStatus.forEach(status => {//loop in the status array database and check if the status is true
-                                if (status.isDisplayed === true) {//if so loop in the checkboxes and check them
-                                    selectioncheckboxes.forEach(checkbox => {
-                                        if (status.HeaderName === checkbox.value) {
-                                            checkbox.checked = true;
-                                            isChecked = true
-                                            tableRows.forEach((row, index) => {
-                                                const headerName = row.innerText.replace(/[\n\u2191\u2193]/g, '').split(/[\(\{\"]/)[0].trim(); // get the text content of the header cell
-                                                if (status.isDisplayed === true) {
-                                                    if (status.HeaderName === headerName) {
-                                                        if (index !== 1) {//DO NOT SHOW THE HIDDEN ID COLUMN
-                                                            row.style.display = 'table-cell';
-                                                        }
-                                                    }
-                                                }
-                                            });
-                                        }
-                                    })
-                                }
-                                else if (status.isDisplayed === false) {
-                                    selectioncheckboxes.forEach(checkbox => {
-                                        if (status.HeaderName === checkbox.value) {
-                                            checkbox.checked = false;
-                                            isChecked = false
-                                            tableRows.forEach((row, index) => {
-                                                const headerName = row.innerText.replace(/[\n\u2191\u2193]/g, '').split(/[\(\{\"]/)[0].trim(); // get the text content of the header cell
-                                                if (isChecked === false) {
-                                                    if (status.HeaderName === headerName) {
-                                                        if (index !== 1) {//DO NOT SHOW THE HIDDEN ID COLUMN
-                                                            row.style.display = 'none';
-                                                        }
-                                                    }
-                                                }
-                                            });
-                                        }
-
-                                    })
-                                }
-                            });
-
-
-                            //OPERATIONS WHEN USER CHECKS OR UNCHECK CHECKBOXES
-                            //add event listener on each tickable checkbox
-                            const shiftCheckbox = document.getElementById('checkbox-id-shift');
-                            const vatCheckbox = document.getElementById('checkbox-id-vat');
-                            const invoiceCheckbox = document.getElementById('checkbox-id-invoice');
-                            const categoryCheckbox = document.getElementById('checkbox-id-category');
-                            const cashEquivCheckbox = document.getElementById('checkbox-id-cashEquiv');
-                            const BalanceCheckbox = document.getElementById('checkbox-id-balance');
-                            let headerisDisplayed = ""
-                            let headerNamefcb = ""
-
-                            //WHEN THE USER CLICKS ON SHIFT CHECKBOX
-                            shiftCheckbox.addEventListener('click', () => {
-                                if (shiftCheckbox.checked === true) {
-                                    shiftCheckbox.checked = true;
-                                    const tableHeaders = document.querySelectorAll('.shiftListTable thead th'); // get all table headers
-                                    tableHeaders.forEach((theader, index) => {
-                                        headerNamefcb = theader.innerText.replace(/[\n\u2191\u2193]/g, '').split(/[\(\{\"]/)[0].trim(); // get the text content of the header cell
-                                        if ("ShiftNo" === headerNamefcb) {
-                                            if (index !== 1) {//DO NOT SHOW THE HIDDEN ID COLUMN
-                                                theader.style.display = 'table-cell';
-                                                headerisDisplayed = true
-                                                //NOW LOOP IN THE HEADERSTATUS ARRAY UPDATING THE ISDISPLAYED VALUE
-                                                for (let i = 0; i < headersStatus.length; i++) {
-                                                    if (headersStatus[i].HeaderName === 'ShiftNo') {
-                                                        headersStatus[i].isDisplayed = true;
-                                                    }
-                                                }
-                                                //THEN ALSO THE TDs SHOULD BE TRUE
-                                                //GET ALL THE TD IN THE TABLE UNDER SHIFT 
-                                                const myTableColumns = document.querySelectorAll('.editableShift'); // get shift table rows
-                                                myTableColumns.forEach(column => {
-                                                    column.style.display = 'table-cell'//LOOP DISPLAYING THE TDS
-                                                });
-                                                //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE SHIFT STATUS NOT THE ENTIRE COLLECTION
-                                                spinner.style.display = 'block'//display progress bar
-                                                fetch('/updateHeaderStatusAdv', { //THIS IS AN API END POINT TO CARRY THE VARIABLE NAMES TO ANOTHER JS MODULE WHICH WILL BE THE SEVER
-                                                    method: 'POST',
-                                                    headers: {
-                                                        'Content-Type': 'application/json'
-                                                    },
-                                                    body: JSON.stringify({
-                                                        headerNamefcb,
-                                                        headerisDisplayed,
-                                                        sessionId
-                                                    })
-                                                })
-                                                    .then(response => response.json())
-                                                    .then(data => {
-                                                        // Show alert
-                                                        if (data.isSaving === true) {//get the isSaving variable form the server 
-                                                            spinner.style.display = 'none'//remove progress bar
-                                                            notification('Updated')
-                                                        }
-                                                        else {
-                                                            notification("Not updated..error occured");
-
-                                                        }
-
-                                                    })
-
-                                                    .catch(error => {
-                                                        console.error(`Error updating Date field `, error);
-                                                    });
-
-
-                                            }
-
-                                        }
-                                    });
-                                }
-                                else if (shiftCheckbox.checked === false) {
-                                    shiftCheckbox.checked = false;
-                                    isChecked = false
-                                    const tableHeaders = document.querySelectorAll('.shiftListTable thead th'); // get all table rows
-                                    tableHeaders.forEach((theader, index) => {
-                                        headerNamefcb = theader.innerText.replace(/[\n\u2191\u2193]/g, '').split(/[\(\{\"]/)[0].trim(); // get the text content of the header cell
-                                        if ("ShiftNo" === headerNamefcb) {
-                                            if (index !== 1) {//DO NOT SHOW THE HIDDEN ID COLUMN
-                                                theader.style.display = 'none';
-                                                //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE SHIFT STATUS NOT THE ENTIRE COLLECTION
-                                                headerisDisplayed = false
-                                                //NOW LOOP IN THE HEADERSTATUS ARRAY UPDATING THE ISDISPLAYED VALUE
-                                                for (let i = 0; i < headersStatus.length; i++) {
-                                                    if (headersStatus[i].HeaderName === 'ShiftNo') {
-                                                        headersStatus[i].isDisplayed = false;
-                                                    }
-                                                }
-                                                //GET ALL THE TD IN THE TABLE UNDER SHIFT 
-                                                const myTableColumns = document.querySelectorAll('.editableShift'); // get shift table rows
-                                                myTableColumns.forEach(column => {
-                                                    column.style.display = 'none' //LOOP REMOVING THE TDS
-                                                });
-                                                //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE SHIFT STATUS NOT THE ENTIRE COLLECTION
-                                                spinner.style.display = 'block'//display progress bar
-                                                fetch('/updateHeaderStatusAdv', { //THIS IS AN API END POINT TO CARRY THE VARIABLE NAMES TO ANOTHER JS MODULE WHICH WILL BE THE SEVER
-                                                    method: 'POST',
-                                                    headers: {
-                                                        'Content-Type': 'application/json'
-                                                    },
-                                                    body: JSON.stringify({
-                                                        headerNamefcb,
-                                                        headerisDisplayed,
-                                                        sessionId
-                                                    })
-                                                })
-                                                    .then(response => response.json())
-                                                    .then(data => {
-                                                        // Show alert
-                                                        if (data.isSaving === true) {
-                                                            spinner.style.display = 'none'//remove progress bar
-                                                            notification('Updated')
-                                                        }
-                                                        else {
-                                                            notification("Not updated..error occured");
-
-                                                        }
-                                                    })
-
-                                                    .catch(error => {
-                                                        console.error(`Error updating Date field `, error);
-                                                    });
-
-
-                                            }
-                                        }
-                                    });
-                                }
-                            })
-                            //WHEN THE USER CLICKS ON VAT CHECKBOX
-                            vatCheckbox.addEventListener('click', () => {
-                                if (vatCheckbox.checked === true) {
-                                    vatCheckbox.checked = true;
-                                    const tableHeaders = document.querySelectorAll('.shiftListTable thead th'); // get all table headers
-                                    tableHeaders.forEach((theader, index) => {
-                                        headerNamefcb = theader.innerText.replace(/[\n\u2191\u2193]/g, '').split(/[\(\{\"]/)[0].trim(); // get the text content of the header cell
-                                        if ("Tax" === headerNamefcb) {
-                                            if (index !== 1) {//DO NOT SHOW THE HIDDEN ID COLUMN
-                                                theader.style.display = 'table-cell';
-                                                headerisDisplayed = true
-                                                //NOW LOOP IN THE HEADERSTATUS ARRAY UPDATING THE ISDISPLAYED VALUE
-                                                for (let i = 0; i < headersStatus.length; i++) {
-                                                    if (headersStatus[i].HeaderName === 'Tax') {
-
-                                                        headersStatus[i].isDisplayed = true;
-                                                        break; // Assuming there is only one object with 'ShiftNo', exit the loop after updating
-                                                    }
-                                                }
-
-                                                //THEN ALSO THE TDs SHOULD BE TRUE
-                                                //GET ALL THE TD IN THE TABLE UNDER VAT 
-                                                const myTableColumns = document.querySelectorAll('.radioBtn'); // get shift table rows
-                                                myTableColumns.forEach(column => {
-                                                    column.style.display = 'table-cell'//LOOP DISPLAYING THE TDS
-                                                });
-                                                //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE VAT STATUS NOT THE ENTIRE COLLECTION
-                                                spinner.style.display = 'block'//display progress bar
-                                                fetch('/updateHeaderStatusAdv', { //THIS IS AN API END POINT TO CARRY THE VARIABLE NAMES TO ANOTHER JS MODULE WHICH WILL BE THE SEVER
-                                                    method: 'POST',
-                                                    headers: {
-                                                        'Content-Type': 'application/json'
-                                                    },
-                                                    body: JSON.stringify({
-                                                        headerNamefcb,
-                                                        headerisDisplayed,
-                                                        sessionId
-                                                    })
-                                                })
-                                                    .then(response => response.json())
-                                                    .then(data => {
-                                                        // Show alert
-                                                        if (data.isSaving === true) {
-                                                            notification('Updated')
-                                                            spinner.style.display = 'none'//remove progress bar
-                                                        }
-                                                        else {
-                                                            notification("Not updated..error occured");
-
-                                                        }
-
-                                                    })
-
-                                                    .catch(error => {
-                                                        console.error(`Error updating Date field `, error);
-                                                    });
-
-
-                                            }
-
-                                        }
-                                    });
-                                }
-                                else if (vatCheckbox.checked === false) {
-                                    vatCheckbox.checked = false;
-                                    isChecked = false
-                                    const tableHeaders = document.querySelectorAll('.shiftListTable thead th'); // get all table rows
-                                    tableHeaders.forEach((theader, index) => {
-                                        headerNamefcb = theader.innerText.replace(/[\n\u2191\u2193]/g, '').split(/[\(\{\"]/)[0].trim(); // get the text content of the header cell
-                                        if ("Tax" === headerNamefcb) {
-                                            if (index !== 1) {//DO NOT SHOW THE HIDDEN ID COLUMN
-                                                theader.style.display = 'none';
-                                                //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE SHIFT STATUS NOT THE ENTIRE COLLECTION
-                                                headerisDisplayed = false
-                                                //NOW LOOP IN THE HEADERSTATUS ARRAY UPDATING THE ISDISPLAYED VALUE
-                                                for (let i = 0; i < headersStatus.length; i++) {
-                                                    if (headersStatus[i].HeaderName === 'Tax') {
-                                                        headersStatus[i].isDisplayed = false;
-                                                        break; // Assuming there is only one object with 'ShiftNo', exit the loop after updating
-                                                    }
-                                                }
-                                                //GET ALL THE TD IN THE TABLE UNDER VAT 
-                                                const myTableColumns = document.querySelectorAll('.radioBtn'); // get shift table rows
-                                                myTableColumns.forEach(column => {
-                                                    column.style.display = 'none'//LOOP HIDDING THE TDS
-                                                });
-                                                //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE SHIFT STATUS NOT THE ENTIRE COLLECTION
-                                                spinner.style.display = 'block'//display progress bar
-                                                fetch('/updateHeaderStatusAdv', { //THIS IS AN API END POINT TO CARRY THE VARIABLE NAMES TO ANOTHER JS MODULE WHICH WILL BE THE SEVER
-                                                    method: 'POST',
-                                                    headers: {
-                                                        'Content-Type': 'application/json'
-                                                    },
-                                                    body: JSON.stringify({
-                                                        headerNamefcb,
-                                                        headerisDisplayed,
-                                                        sessionId
-                                                    })
-                                                })
-                                                    .then(response => response.json())
-                                                    .then(data => {
-                                                        // Show alert
-                                                        if (data.isSaving === tru) {
-
-                                                            spinner.style.display = 'none'//remove progress bar
-                                                            notification('Updated')
-
-                                                        }
-                                                        else {
-                                                            notification("Not updated..error occured");
-
-                                                        }
-
-                                                    })
-
-                                                    .catch(error => {
-                                                        console.error(`Error updating Date field `, error);
-                                                    });
-
-
-                                            }
-                                        }
-                                    });
-                                }
-                            })
-
-                            //WHEN THE USER CLICKS ON INVOICE CHECKBOX
-                            invoiceCheckbox.addEventListener('click', () => {
-                                if (invoiceCheckbox.checked === true) {
-                                    invoiceCheckbox.checked = true;
-                                    const tableHeaders = document.querySelectorAll('.shiftListTable thead th'); // get all table headers
-                                    tableHeaders.forEach((theader, index) => {
-                                        headerNamefcb = theader.innerText.replace(/[\n\u2191\u2193]/g, '').split(/[\(\{\"]/)[0].trim(); // get the text content of the header cell
-                                        if ("InvoiceRef" === headerNamefcb) {
-                                            if (index !== 1) {//DO NOT SHOW THE HIDDEN ID COLUMN
-                                                theader.style.display = 'table-cell';
-                                                headerisDisplayed = true
-                                                //NOW LOOP IN THE HEADERSTATUS ARRAY UPDATING THE ISDISPLAYED VALUE
-                                                for (let i = 0; i < headersStatus.length; i++) {
-                                                    if (headersStatus[i].HeaderName === 'InvoiceRef') {
-                                                        headersStatus[i].isDisplayed = true;
-                                                        break; // Assuming there is only one object with 'ShiftNo', exit the loop after updating
-                                                    }
-                                                }
-                                                console.log(headersStatus)
-                                                //THEN ALSO THE TDs SHOULD BE TRUE
-                                                //GET ALL THE TD IN THE TABLE UNDER INVOICE 
-                                                const myTableColumns = document.querySelectorAll('.editableInvoice'); // get shift table rows
-
-                                                myTableColumns.forEach(column => {
-                                                    column.style.display = 'table-cell'//LOOP DISPLAYING THE TDS
-                                                });
-                                                //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE SHIFT STATUS NOT THE ENTIRE COLLECTION
-                                                spinner.style.display = 'block'//display progress bar
-                                                fetch('/updateHeaderStatusAdv', { //THIS IS AN API END POINT TO CARRY THE VARIABLE NAMES TO ANOTHER JS MODULE WHICH WILL BE THE SEVER
-                                                    method: 'POST',
-                                                    headers: {
-                                                        'Content-Type': 'application/json'
-                                                    },
-                                                    body: JSON.stringify({
-                                                        headerNamefcb,
-                                                        headerisDisplayed,
-                                                        sessionId
-                                                    })
-                                                })
-                                                    .then(response => response.json())
-                                                    .then(data => {
-                                                        // Show alert
-                                                        if (data.isSaving === true) {
-
-                                                            spinner.style.display = 'none'//remove progress bar
-                                                            notification('Updated')
-
-                                                        }
-                                                        else {
-                                                            notification("Not updated..error occured");
-
-                                                        }
-                                                    })
-
-                                                    .catch(error => {
-                                                        console.error(`Error updating Date field `, error);
-                                                    });
-
-                                            }
-
-                                        }
-                                    });
-                                }
-                                else if (invoiceCheckbox.checked === false) {
-                                    invoiceCheckbox.checked = false;
-                                    isChecked = false
-                                    const tableHeaders = document.querySelectorAll('.shiftListTable thead th'); // get all table rows
-                                    tableHeaders.forEach((theader, index) => {
-                                        headerNamefcb = theader.innerText.replace(/[\n\u2191\u2193]/g, '').split(/[\(\{\"]/)[0].trim(); // get the text content of the header cell
-                                        if ("InvoiceRef" === headerNamefcb) {
-                                            if (index !== 1) {//DO NOT SHOW THE HIDDEN ID COLUMN
-                                                theader.style.display = 'none';
-                                                //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE SHIFT STATUS NOT THE ENTIRE COLLECTION
-                                                headerisDisplayed = false
-                                                //NOW LOOP IN THE HEADERSTATUS ARRAY UPDATING THE ISDISPLAYED VALUE
-                                                for (let i = 0; i < headersStatus.length; i++) {
-                                                    if (headersStatus[i].HeaderName === 'InvoiceRef') {
-                                                        headersStatus[i].isDisplayed = false;
-                                                    }
-                                                }
-                                                //GET ALL THE TD IN THE TABLE UNDER invoice 
-                                                const myTableColumns = document.querySelectorAll('.editableInvoice'); // get invoice table rows
-
-                                                myTableColumns.forEach(column => {
-                                                    column.style.display = 'none'//LOOP HIDDING THE TDS
-                                                });
-                                                //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE SHIFT STATUS NOT THE ENTIRE COLLECTION
-                                                spinner.style.display = 'block'//display progress bar
-                                                fetch('/updateHeaderStatusAdv', { //THIS IS AN API END POINT TO CARRY THE VARIABLE NAMES TO ANOTHER JS MODULE WHICH WILL BE THE SEVER
-                                                    method: 'POST',
-                                                    headers: {
-                                                        'Content-Type': 'application/json'
-                                                    },
-                                                    body: JSON.stringify({
-                                                        headerNamefcb,
-                                                        headerisDisplayed,
-                                                        sessionId
-                                                    })
-                                                })
-                                                    .then(response => response.json())
-                                                    .then(data => {
-                                                        // Show alert
-                                                        if (data.isSaving === true) {
-
-                                                            spinner.style.display = 'none'//remove progress bar
-                                                            notification('Updated')
-
-                                                        } else {
-                                                            notification("Not updated..error occured");
-
-                                                        }
-
-                                                    })
-
-                                                    .catch(error => {
-                                                        console.error(`Error updating Date field `, error);
-                                                    });
-
-                                            }
-                                        }
-                                    });
-                                }
-                            })
-
-                            //WHEN THE USER CLICKS ON RUNNING BALANCE CHECKBOX
-                            BalanceCheckbox.addEventListener('click', () => {
-                                if (BalanceCheckbox.checked === true) {
-                                    BalanceCheckbox.checked = true;
-                                    const tableHeaders = document.querySelectorAll('.shiftListTable thead th'); // get all table headers
-                                    tableHeaders.forEach((theader, index) => {
-                                        headerNamefcb = theader.innerText.replace(/[\n\u2191\u2193]/g, '').split(/[\(\{\"]/)[0].trim(); // get the text content of the header cell
-                                        if ("RunningBalance" === headerNamefcb) {
-                                            if (index !== 1) {//DO NOT SHOW THE HIDDEN ID COLUMN
-                                                theader.style.display = 'table-cell';
-                                                headerisDisplayed = true
-                                                //NOW LOOP IN THE HEADERSTATUS ARRAY UPDATING THE ISDISPLAYED VALUE
-                                                for (let i = 0; i < headersStatus.length; i++) {
-                                                    if (headersStatus[i].HeaderName === 'RunningBalance') {
-                                                        headersStatus[i].isDisplayed = true;
-                                                    }
-                                                }
-                                                //THEN ALSO THE TDs SHOULD BE TRUE
-                                                //GET ALL THE TD IN THE TABLE UNDER RUNNING BALANCE 
-                                                const myTableColumns = document.querySelectorAll('.runningBalance'); // get RUNNING BALANCE table rows
-
-                                                myTableColumns.forEach(column => {
-                                                    column.style.display = 'table-cell'//LOOP DISPLAYING THE TDS
-                                                });
-                                                //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE RUNNING BALANCE STATUS NOT THE ENTIRE COLLECTION
-                                                spinner.style.display = 'block'//display progress bar
-                                                fetch('/updateHeaderStatusAdv', { //THIS IS AN API END POINT TO CARRY THE VARIABLE NAMES TO ANOTHER JS MODULE WHICH WILL BE THE SEVER
-                                                    method: 'POST',
-                                                    headers: {
-                                                        'Content-Type': 'application/json'
-                                                    },
-                                                    body: JSON.stringify({
-                                                        headerNamefcb,
-                                                        headerisDisplayed,
-                                                        sessionId
-                                                    })
-                                                })
-                                                    .then(response => response.json())
-                                                    .then(data => {
-                                                        // Show alert
-                                                        if (data.isSaving === true) {
-
-                                                            spinner.style.display = 'none'//remove progress bar
-                                                            notification('Updated')
-
-                                                        }
-                                                        else {
-                                                            notification("Not updated..error occured");
-
-                                                        }
-
-                                                    })
-
-                                                    .catch(error => {
-                                                        console.error(`Error updating Date field `, error);
-                                                    });
-
-
-                                            }
-
-                                        }
-                                    });
-                                }
-                                else if (BalanceCheckbox.checked === false) {
-                                    BalanceCheckbox.checked = false;
-                                    isChecked = false
-                                    const tableHeaders = document.querySelectorAll('.shiftListTable thead th'); // get all table rows
-                                    tableHeaders.forEach((theader, index) => {
-                                        headerNamefcb = theader.innerText.replace(/[\n\u2191\u2193]/g, '').split(/[\(\{\"]/)[0].trim(); // get the text content of the header cell
-                                        if ("RunningBalance" === headerNamefcb) {
-                                            if (index !== 1) {//DO NOT SHOW THE HIDDEN ID COLUMN
-                                                theader.style.display = 'none';
-                                                //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE RUNNING BALANCE STATUS NOT THE ENTIRE COLLECTION
-                                                headerisDisplayed = false
-                                                //NOW LOOP IN THE HEADERSTATUS ARRAY UPDATING THE ISDISPLAYED VALUE
-                                                for (let i = 0; i < headersStatus.length; i++) {
-                                                    if (headersStatus[i].HeaderName === 'RunningBalance') {
-                                                        headersStatus[i].isDisplayed = false;
-                                                    }
-                                                }
-                                                //GET ALL THE TD IN THE TABLE UNDER CASH EQUIV 
-                                                const myTableColumns = document.querySelectorAll('.runningBalance'); // get RUNNING BALANCE table rows
-                                                myTableColumns.forEach(column => {
-                                                    column.style.display = 'none'//LOOP HIDDING THE TDS
-                                                });
-                                                //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE RUNNING BALANCE STATUS NOT THE ENTIRE COLLECTION
-                                                spinner.style.display = 'block'//display progress bar
-                                                fetch('/updateHeaderStatusAdv', { //THIS IS AN API END POINT TO CARRY THE VARIABLE NAMES TO ANOTHER JS MODULE WHICH WILL BE THE SEVER
-                                                    method: 'POST',
-                                                    headers: {
-                                                        'Content-Type': 'application/json'
-                                                    },
-                                                    body: JSON.stringify({
-                                                        headerNamefcb,
-                                                        headerisDisplayed,
-                                                        sessionId
-                                                    })
-                                                })
-                                                    .then(response => response.json())
-                                                    .then(data => {
-                                                        // Show alert
-                                                        if (data.isSaving === true) {
-
-                                                            spinner.style.display = 'none'//remove progress bar
-                                                            notification('Updated')
-
-                                                        }
-                                                        else {
-                                                            notification("Not updated..error occured");
-
-                                                        }
-
-                                                    })
-
-                                                    .catch(error => {
-                                                        console.error(`Error updating Date field `, error);
-                                                    });
-
-
-                                            }
-                                        }
-                                    });
-                                }
-                            })
                             //==============================================================================================
 
                             const allTypesList = newEmptyRow.querySelectorAll('.typeList-option')
@@ -2288,6 +2480,7 @@ fetch('/currencies')
                             const invoiceCell = newEmptyRow.querySelector('.editableInvoice');
                             const descriptionCell = newEmptyRow.querySelector('.editable-cell');
                             const expenseAmount = newEmptyRow.querySelector(".expAmount");
+                            const expenseAmountCell = newEmptyRow.querySelector(".amount-cell");
                             const expcOptions = newEmptyRow.querySelectorAll(".expcate-option");
                             const incomeOptions = newEmptyRow.querySelectorAll(".incCate-option");
                             const cashFlowDate = newEmptyRow.querySelector('.expenseDate');
@@ -2343,11 +2536,10 @@ fetch('/currencies')
 
                                 }
                                 else if (newDate === '') {
-                                    //maintain focus on the date cell
-                                    cashFlowDate.focus()
-                                    notification('invalid date format')
-                                    return
+                                    newDate = newDate
+
                                 }
+                                return newDate
 
                             }
                             cashFlowDate.addEventListener('keydown', (event) => {
@@ -2373,84 +2565,85 @@ fetch('/currencies')
                                     event.preventDefault()
                                     let date = cashFlowDate.innerText
                                     const newDate = fixDate(date)
-                                    if (rowId === '') {
-                                        hasId = false
-
-                                    }
-                                    else if (rowId !== '') {
-                                        hasId = true
-                                        //UPDATE THE ARRAY
-                                        for (let a = 0; a < cashFlowArray.length; a++) {
-
-                                            if (cashFlowArray[a]._id === rowId) {
-                                                cashFlowArray[a].CashFlowDate = cashFlowDate.innerText
-                                            }
-
-                                        }
-                                        const parts = (cashFlowDate.innerText).split("/");
-                                        const formattedDate = parts[1] + "/" + parts[0] + "/" + parts[2];
-                                        const formattedDates2 = new Date(formattedDate);
-                                        startDate = new Date(formattedDates2);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                        endDate = new Date(formattedDates2);
-                                        // remove the stored date range from local storage
-                                        localStorage.removeItem('firstDate');
-                                        localStorage.removeItem('lastDate');
-                                        // Store the start and end date values in localStorage
-                                        localStorage.setItem('firstDate', startDate);
-                                        localStorage.setItem('lastDate', endDate);
-                                        // initializeDateRangePicker()
-
-                                        fetch('/updateCashFlowDate', {
-                                            method: 'POST',
-                                            headers: {
-                                                'Content-Type': 'application/json'
-                                            },
-                                            body: JSON.stringify({
-                                                rowId,
-                                                newDate
-                                            })
-                                        })
-                                            .then(response => response.json())
-                                            .then(data => {
-                                                // Show alert
-                                                if (data.amUpdated === true) {
-                                                    notification('Updated')
-                                                    // spinner.style.display = 'none'
-                                                    //UPDATE THE INTERFACE IF THE ARRAY UPDATE HAS SOMETHING
-                                                    const sDate =
-                                                        localStorage.getItem("firstDate"); //DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                                    const eDate =
-                                                        localStorage.getItem("lastDate");
-                                                    const startDate = new Date(sDate); //ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                                    const endDate = new Date(eDate);
-                                                    // initializeDateRangePicker()
-                                                    // defaultDisplayContent2(startDate, endDate);
-
-                                                }
-                                                else {
-                                                    notification("Not updated..error occured");
-                                                    defaultDisplayContent2(startDate, endDate);
-
-                                                }
-
-                                            })
-                                            .catch(error => {
-                                                console.error(`Error updating Date field for expense ID: ${rowId}`, error);
-                                            });
+                                    if (newDate === '') {
+                                        //maintain focus on the date cell
+                                        cashFlowDate.focus()
+                                        notification('invalid date format')
                                         return
                                     }
-                                    //check if the text is present
-                                    if (cashFlowDate.innerText !== '') {
-                                        //now focus on the next cell
-                                        if (typeStatus.isDisplayed === true) {
-                                            //open the type dropdown
-                                            const nextDropdown = new bootstrap.Dropdown(newEmptyRow.querySelector('.typeSpan'));
-                                            nextDropdown.toggle();
+                                    else {
+                                        if (rowId === '') {
+                                            hasId = false
+                                            //now focus on the next cell
+                                            if (typeStatus.isDisplayed === true) {
+                                                //open the type dropdown
+                                                const nextDropdown = new bootstrap.Dropdown(newEmptyRow.querySelector('.typeSpan'));
+                                                nextDropdown.toggle();
+                                            }
                                         }
+                                        else if (rowId !== '') {
+                                            hasId = true
+                                            //UPDATE THE ARRAY
+                                            for (let a = 0; a < cashFlowArray.length; a++) {
 
+                                                if (cashFlowArray[a]._id === rowId) {
+                                                    cashFlowArray[a].CashFlowDate = cashFlowDate.innerText
+                                                }
 
+                                            }
+                                            const parts = (cashFlowDate.innerText).split("/");
+                                            const formattedDate = parts[1] + "/" + parts[0] + "/" + parts[2];
+                                            const formattedDates2 = new Date(formattedDate);
+                                            startDate = new Date(formattedDates2);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                            endDate = new Date(formattedDates2);
+                                            // remove the stored date range from local storage
+                                            localStorage.removeItem('firstDate');
+                                            localStorage.removeItem('lastDate');
+                                            // Store the start and end date values in localStorage
+                                            localStorage.setItem('firstDate', startDate);
+                                            localStorage.setItem('lastDate', endDate);
+                                            // initializeDateRangePicker()
+
+                                            fetch('/updateCashFlowDate', {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json'
+                                                },
+                                                body: JSON.stringify({
+                                                    rowId,
+                                                    newDate,
+                                                    sessionId
+                                                })
+                                            })
+                                                .then(response => response.json())
+                                                .then(data => {
+                                                    // Show alert
+                                                    if (data.amUpdated === true) {
+                                                        notification('Updated')
+                                                        // spinner.style.display = 'none'
+                                                        initializeDateRangePicker()
+                                                        // defaultDisplayContent2(startDate, endDate);
+
+                                                    }
+                                                    else {
+                                                        notification("Not updated..error occured");
+                                                        const sDate =
+                                                            localStorage.getItem("firstDate"); //DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                                        const eDate =
+                                                            localStorage.getItem("lastDate");
+                                                        const startDate = new Date(sDate); //ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                                        const endDate = new Date(eDate);
+                                                        defaultDisplayContent2(startDate, endDate);
+
+                                                    }
+
+                                                })
+                                                .catch(error => {
+                                                    console.error(`Error updating Date field for expense ID: ${rowId}`, error);
+                                                });
+                                            return
+                                        }
                                     }
-
                                 }
                             })
                             // shift
@@ -2477,26 +2670,12 @@ fetch('/currencies')
                                     invoiceCell.focus()
                                 }
                             })
-                            // newEmptyRow.querySelector('.categories-cell').addEventListener("click", function (event) {
-                            //     let date = cashFlowDate.innerText
-                            //     fixDate(date)
-                            // })
-                            // newEmptyRow.querySelector('.radioBtn').addEventListener("click", function (event) {
-                            //     let date = cashFlowDate.innerText
-                            //     fixDate(date)
-                            // })
+
                             newEmptyRow.querySelector('.type').addEventListener("click", function (event) {
                                 let date = cashFlowDate.innerText
                                 fixDate(date)
                             })
-                            // newEmptyRow.querySelector('.currencies-cell').addEventListener("click", function (event) {
-                            //     let date = cashFlowDate.innerText
-                            //     fixDate(date)
-                            // })
-                            // expenseAmount.addEventListener("click", function (event) {
-                            //     let date = cashFlowDate.innerText
-                            //     fixDate(date)
-                            // })
+
                             //=====================================================================================
                             // TYPE CELL
                             allTypesList.forEach(type => {
@@ -2715,9 +2894,7 @@ fetch('/currencies')
                                             document.querySelector('.CashBalance').innerText = baseCurrCode + '  ' + Number(cashBalance).toFixed(2);;//place the cash Equiv value on the cashEquiv cell
                                         }
                                         const typeSelected = type.innerText
-                                        // if (categoryToDb.length > 0) {
-                                        //     insertCategoryRecord(categoryToDb, sessionId)
-                                        // }
+
                                         //endesa ku database the result
                                         fetch('/updateCashFlowType', {
                                             method: 'POST',
@@ -2727,8 +2904,6 @@ fetch('/currencies')
                                             body: JSON.stringify({
                                                 rowId,
                                                 typeSelected,
-                                                // newCategory,
-                                                // categoryToDb,
                                                 sessionId
                                             })
                                         })
@@ -2738,13 +2913,12 @@ fetch('/currencies')
                                                 if (data.amUpdated === true) {
                                                     notification('Updated')
                                                     spinner.style.display = 'none'
-                                                    // defaultDisplayContent2(startDate, endDate)
+                                                    defaultDisplayContent2(startDate, endDate)
                                                 }
                                                 else {
                                                     notification('Not updated..error occured')
                                                     spinner.style.display = 'none'
                                                     defaultDisplayContent2(startDate, endDate)
-
                                                 }
 
                                             })
@@ -2885,7 +3059,6 @@ fetch('/currencies')
                                         editableText.id = `editable-ztftext${i}`;
 
                                     }
-                                    // editableText.textContent = "";  // Initially empty, can be populated on click
                                     if (rowId !== '') {
                                         // Check if the value from rowDataFromDb is not empty or zero
                                         if (rowDataFromDb[i] !== "" && rowDataFromDb[i] !== 0) {
@@ -2894,24 +3067,25 @@ fetch('/currencies')
                                             editableText.innerText = ""; // Placeholder text if empty or zero
                                         }
                                     }
-                                    else {
-                                        // check if there has ben any taxt type selection,if any has been selected fill the tds with its data if they had been filled before
-                                        if (Object.keys(vatEntry).length !== 0 && taxtypeSelected === 'vat') {
-                                            const keys = Object.keys(vatEntry)
-                                            const field = keys[i]
-                                            editableText.innerText = vatEntry[field];
-                                        }
+                                    // else {
+                                    //     // check if there has ben any taxt type selection,if any has been selected fill the tds with its data if they had been filled before
+                                    //     if (Object.keys(vatEntry).length !== 0 && taxtypeSelected === 'vat') {
+                                    //         const keys = Object.keys(vatEntry)
+                                    //         const field = keys[i]
+                                    //         editableText.innerText = vatEntry[field];
+                                    //     }
 
-                                        else if (Object.keys(ztfEntry).length !== 0 && taxtypeSelected === 'ztf') {
-                                            const keys = Object.keys(ztfEntry)
-                                            const field = keys[i]
-                                            editableText.innerText = ztfEntry[field];
-                                        }
-                                        else {
-                                            editableText.textContent = "";  // Initially empty, can be populated on click
+                                    //     else if (Object.keys(ztfEntry).length !== 0 && taxtypeSelected === 'ztf') {
+                                    //         const keys = Object.keys(ztfEntry)
+                                    //         const field = keys[i]
+                                    //         editableText.innerText = ztfEntry[field];
+                                    //     }
+                                    //     else {
+                                    //         editableText.textContent = "";  // Initially empty, can be populated on click
 
-                                        }
-                                    }
+                                    //     }
+                                    // }
+
                                     // Add the label and editable text to the cell
                                     newCell.appendChild(label);
                                     newCell.appendChild(editableText);
@@ -2940,37 +3114,56 @@ fetch('/currencies')
                                             event.preventDefault();
                                             // newEmptyRow.querySelector(`.vatTd`).classList.remove('clicked')
                                             if (taxtypeSelected === 'vat') {
-                                                const nextEditableText = newEmptyRow.querySelector(`#editable-vattext${i + 1}`);
-                                                if (nextEditableText) {
-
-                                                    if (i === 3) {
-                                                        if (((newEmptyRow.querySelector(`#editable-vattext${3}`).innerText).length > 9) && (newEmptyRow.querySelector(`#editable-vattext${3}`).innerText).startsWith('22')) {
-                                                        }
-                                                        else {
-                                                            notification('vat number is invalid')
-                                                            return
-                                                        }
+                                                //IF FOCUS IS ON VAT AMOUNT AND IS FILLED WITH SOMETHIN WHEN ENTER IS PRESSED LET IT ACT AS YES TICK
+                                                if (document.activeElement.id === 'editable-vattext5') {
+                                                    // alert(newEmptyRow.querySelector(`#editable-vattext5`).innerText.trim())
+                                                    let editableTextVatAmount = 0
+                                                    editableTextVatAmount = Number(newEmptyRow.querySelector(`#editable-vattext5`).innerText.trim()); // VatAmount field
+                                                    if (editableTextVatAmount !== 0) {
+                                                        saveTaxData()
+                                                        newEmptyRow.querySelector(`.VatDropdown-menu`).style.display = 'none'; // Close the dropdown menu
+                                                        newEmptyRow.querySelector('.Taxdropdown-menu').style.display = 'none';
+                                                        vatBtn.checked = true
                                                     }
-                                                    if (i === 4) {
-                                                        if (((newEmptyRow.querySelector(`#editable-vattext${4}`).innerText).length > 6) && (newEmptyRow.querySelector(`#editable-vattext${4}`).innerText).startsWith('200')) {
-                                                        }
-                                                        else {
-                                                            notification('tin number is invalid')
-                                                            return
-                                                        }
-                                                    }
-
-                                                    if (i === 5) {
-                                                        newEmptyRow.querySelector(`#editable-vattext${5}`).innerText === ''
+                                                    else {
                                                         notification('vat amount cant be empty')
-                                                        return
                                                     }
-
                                                 }
-                                                // nextEditableText.innerText = ''
-                                                nextEditableText.contentEditable = true
-                                                nextEditableText.focus();
-                                                newEmptyRow.querySelector(`#editable-vattext${0}`).contentEditable = true
+                                                else {
+                                                    // For other cells, move focus to the next editable cell
+                                                    const currentCellId = document.activeElement.id;
+                                                    const currentIndex = parseInt(currentCellId.match(/\d+/)[0], 10); // Extract the number from the ID
+                                                    const nextIndex = currentIndex + 1;
+
+                                                    // Determine the next cell ID based on the selected tax type
+                                                    const nextCellId = taxtypeSelected === 'vat' ? `#editable-vattext${nextIndex}` : `#editable-ztftext${nextIndex}`;
+                                                    const nextEditableText = newEmptyRow.querySelector(nextCellId);
+                                                    // const nextEditableText = newEmptyRow.querySelector(`#editable-vattext${i + 1}`);
+                                                    if (nextEditableText) {
+                                                        if (i === 3) {
+                                                            if (((newEmptyRow.querySelector(`#editable-vattext${3}`).innerText).length >= 9) && (newEmptyRow.querySelector(`#editable-vattext${3}`).innerText).startsWith('22')) {
+                                                            }
+                                                            else {
+                                                                notification('vat number is invalid')
+                                                                return
+                                                            }
+                                                        }
+                                                        if (i === 4) {
+                                                            if (((newEmptyRow.querySelector(`#editable-vattext${4}`).innerText).length >= 6) && (newEmptyRow.querySelector(`#editable-vattext${4}`).innerText).startsWith('200')) {
+                                                            }
+                                                            else {
+                                                                notification('tin number is invalid')
+                                                                return
+                                                            }
+                                                        }
+
+                                                    }
+                                                    // nextEditableText.innerText = ''
+                                                    nextEditableText.contentEditable = true
+                                                    nextEditableText.focus();
+                                                    newEmptyRow.querySelector(`#editable-vattext${0}`).contentEditable = true
+                                                }
+
                                             }
                                             else if (taxtypeSelected === 'ztf') {
                                                 const nextEditableText = newEmptyRow.querySelector(`#editable-ztftext${i + 1}`);
@@ -3024,7 +3217,9 @@ fetch('/currencies')
                                 tableBody.appendChild(newRow);
                                 myTable.appendChild(tableBody);
                                 newEmptyRow.querySelector(`.VatDropdown-menu`).appendChild(myTable);
-                                newEmptyRow.querySelector(`.VatDropdown-menu`).style.display = 'block'
+                                if (newEmptyRow.querySelector(`.VatDropdown-menu`)) {
+                                    newEmptyRow.querySelector(`.VatDropdown-menu`).style.display = 'block'
+                                }
 
                                 // Cancel (✕) icon functionality
                                 cancelIcon.addEventListener('click', function () {
@@ -3032,6 +3227,10 @@ fetch('/currencies')
                                 });
                                 // Yes Tick (✓) icon functionality
                                 yesTick.addEventListener('click', function () {
+                                    saveTaxData()
+                                });
+
+                                function saveTaxData() {
                                     if (taxtypeSelected === 'vat') {
                                         let VatStatus = ""
                                         let editableTextVatAmount = 0
@@ -3041,8 +3240,9 @@ fetch('/currencies')
                                         const editableTextZimraFsNo = newEmptyRow.querySelector(`#editable-vattext2`).innerText; // ZimraFsNo field
                                         const editableTextVatNumber = newEmptyRow.querySelector(`#editable-vattext3`).innerText; // VatNumber field
                                         const editableTextTinNumber = newEmptyRow.querySelector(`#editable-vattext4`).innerText; // VatNumber field
-                                        editableTextVatAmount = Number(newEmptyRow.querySelector(`#editable-vattext5`).innerText); // VatAmount field
-                                        // Create a vatEntry object with the collected data
+                                        editableTextVatAmount = Number(newEmptyRow.querySelector(`#editable-vattext5`).innerText.trim()); // VatAmount field
+
+                                        //    alert(editableTextVatAmount) // Create a vatEntry object with the collected data
                                         //check if all the data is not equal to defaults values
                                         if (editableTextVatAmount === 0) {
                                             VatStatus = 'N'
@@ -3051,6 +3251,8 @@ fetch('/currencies')
                                         else {
                                             VatStatus = 'Y'
                                             taxStatus = "Y"
+                                            vatBtn.checked = true
+
                                         }
 
                                         vatEntry = {
@@ -3092,9 +3294,10 @@ fetch('/currencies')
                                             taxStatus = "N"
                                         }
                                         else {
-                                            console.log('to yes' + editableTextLevyAmount + ztfStat)
                                             ztfStat = 'Y'
                                             taxStatus = "Y"
+                                            vatBtn.checked = true
+
                                         }
                                         // Create a ztfEntry object with the collected data
                                         ztfEntry = {
@@ -3130,14 +3333,17 @@ fetch('/currencies')
                                             //MOVE FOCUS TO INVOICE CELL
                                             invoiceCell.contentEditable = true
                                             invoiceCell.focus()
+
                                         }
-                                        else if (descriptionStatus.isDisplayed === true) {
+                                        if (descriptionStatus.isDisplayed === true) {
                                             //MOVE FOCUS TO DESCRIPTION CELL
                                             cashFlowDescriptionCell.contentEditable = true
                                             cashFlowDescriptionCell.focus()
+
                                         }
                                     }
-                                });
+
+                                }
                                 // Function to reset a previously clicked cell
                                 function resetCell(cell) {
                                     cell.classList.remove("clicked");  // Remove the floating label effect
@@ -3182,8 +3388,9 @@ fetch('/currencies')
                                         // Show alert
                                         if (data.amUpdated === true) {
                                             notification("Updated");
+                                            // vatBtn.checked = true
                                             spinner.style.display = "none";
-                                            // defaultDisplayContent2(startDate, endDate)
+                                            defaultDisplayContent2(startDate, endDate)
                                         }
                                         else {
                                             notification("Not updated..error occured");
@@ -3321,7 +3528,7 @@ fetch('/currencies')
                                     insertCategoryRecord(categoryToDb, sessionId)
                                     if (rowId !== '') {
                                         const newCategory = insertedCategoryName.value
-                                        categoryTodatabase(newCategory)
+                                        saveCategoryTodatabase(newCategory)
                                     }
                                 }
 
@@ -3353,7 +3560,7 @@ fetch('/currencies')
                                     // notification('Added')
                                     if (rowId !== '') {
                                         const newCategory = insertedCategoryName.value
-                                        categoryTodatabase(newCategory)
+                                        saveCategoryTodatabase(newCategory)
 
                                     }
                                 }
@@ -3453,16 +3660,18 @@ fetch('/currencies')
                             //===============================================================================================
                             const cashFlowDescriptionCell = newEmptyRow.querySelector('.editable-cell');
                             cashFlowDescriptionCell.addEventListener("click", function (event) {
-                                //now display full text
-                                cashFlowDescriptionCell.innerText = newEmptyRow.querySelector('.descriptionId').innerText
-                                // Add an event listener to all editable cells
-                                const range = document.createRange();
-                                const selection = window.getSelection();
+                                if (rowId !== '') {
+                                    //now display full text
+                                    cashFlowDescriptionCell.innerText = newEmptyRow.querySelector('.descriptionId').innerText
+                                    // Add an event listener to all editable cells
+                                    const range = document.createRange();
+                                    const selection = window.getSelection();
 
-                                range.selectNodeContents(this);
-                                range.collapse(false); // Move the cursor to the end of the text
-                                selection.removeAllRanges();
-                                selection.addRange(range);
+                                    range.selectNodeContents(this);
+                                    range.collapse(false); // Move the cursor to the end of the text
+                                    selection.removeAllRanges();
+                                    selection.addRange(range);
+                                }
                             })
                             cashFlowDescriptionCell.addEventListener("keydown", function (event) {
                                 const categoryStatus = Array.from(headersStatus).find(name => name.HeaderName === 'Category');
@@ -3560,11 +3769,9 @@ fetch('/currencies')
                                     expenseSpan.innerText = newCategory;
                                     if (rowId !== '') {
                                         newCategory = (newCategory).replace(/ /g, "_").toLowerCase()
-                                        categoryTodatabase(newCategory)
+                                        saveCategoryTodatabase(newCategory)
                                     }
-                                    // const currDropdown = newEmptyRow.querySelector('.currbtnSpan');
-                                    // const nextDropdown = new bootstrap.Dropdown(currDropdown);
-                                    // nextDropdown.toggle(); // Open the currency droPDOWN
+
                                     const dropdownMenu = new bootstrap.Dropdown(newEmptyRow.querySelector('.categorySpan')); // Create a new dropdown instance
                                     dropdownMenu.hide(); //close the ctegory dropdwon
                                 }
@@ -3575,6 +3782,15 @@ fetch('/currencies')
                                 categoryOption.addEventListener("click", function (event) {
                                     event.preventDefault();
                                     categoryToDatabase(event, i, categoryOption)
+                                    // Open the currency dropdown
+                                    const currencyDropdownButton = newEmptyRow.querySelector('.currbtnSpan');
+                                    if (currencyDropdownButton) {
+                                        alert('i exist')
+                                        const currencyDropdown = new bootstrap.Dropdown(currencyDropdownButton);
+                                        currencyDropdown.toggle(); // Open the currency dropdown
+                                    } else {
+                                        alert("Currency dropdown button not found!");
+                                    }
                                 });
                             });
 
@@ -3593,7 +3809,14 @@ fetch('/currencies')
                                 categoryOption.addEventListener("click", function (event) {
                                     event.preventDefault();
                                     categoryToDatabase(event, i, categoryOption)
-
+                                    // Open the currency dropdown
+                                    const currencyDropdownButton = newEmptyRow.querySelector('.currbtnSpan');
+                                    if (currencyDropdownButton) {
+                                        const currencyDropdown = new bootstrap.Dropdown(currencyDropdownButton);
+                                        currencyDropdown.toggle(); // Open the currency dropdown
+                                    } else {
+                                        console.error("Currency dropdown button not found!");
+                                    }
                                 });
                             });
                             incomeOptions.forEach((categoryOption, i) => {
@@ -3607,7 +3830,7 @@ fetch('/currencies')
                                 })
                             })
                             //function to update category cell in database
-                            function categoryTodatabase(newCategory) {
+                            function saveCategoryTodatabase(newCategory) {
                                 spinner.style.display = "block";
                                 fetch("/updateCashFlowCategory", {
                                     method: "POST",
@@ -3642,15 +3865,7 @@ fetch('/currencies')
                                     });
                             }
                             //============================================================================================
-                            //currency CELL WITH KEYDOWN EVENT TO TRIGGER THE DROPDOWN
-                            // newEmptyRow.querySelector('.currbtnSpan').addEventListener("click", function (event) {
-                            //     if (typeCell.innerText === 'Select Type' && cashFlowDate.innerText === '' || typeCell.innerText === 'Select Type' && cashFlowDate.innerText !== '') {
-                            //         // the dropdown shouldnt open
-                            //         newEmptyRow.querySelector('.currbtnSpan').setAttribute('aria-expanded', 'false')
-                            //         newEmptyRow.querySelector('.currdropdown-menu').classList.remove('show')
 
-                            //     }
-                            // });
                             const CurrencyOptions = newEmptyRow.querySelectorAll(".curr-option");
                             const CurrencySpan = newEmptyRow.querySelector(".currbtnSpan");
                             CurrencyOptions.forEach(currencyOption => {
@@ -3671,21 +3886,23 @@ fetch('/currencies')
                                         }
                                         const currName = Array.from(WorldCurrencies).find(curr => (curr.Currency_Name).toLowerCase() === (newCurrency).toLowerCase());//find matching currency name with the one in the incomes table
                                         if (currName) {
-                                            newCurrCode = currName.ISO_Code;
-                                            //PLACE SYMBOLS WHERE APPROPRIATE
-                                            const rateSymbol =
-                                                newEmptyRow.querySelector(".symbol2");
-                                            const amountSymbol =
-                                                newEmptyRow.querySelector(".symbol1");
-                                            rateSymbol.innerText = newCurrCode;
-                                            amountSymbol.innerText = newCurrCode;
+                                            if (rowId !== '') {
+                                                newCurrCode = currName.ISO_Code;
+                                                //PLACE SYMBOLS WHERE APPROPRIATE
+                                                const rateSymbol =
+                                                    newEmptyRow.querySelector(".symbol2");
+                                                const amountSymbol =
+                                                    newEmptyRow.querySelector(".symbol1");
+                                                rateSymbol.innerText = newCurrCode;
+                                                amountSymbol.innerText = newCurrCode;
+                                            }
 
                                         }
                                     }
                                     if (rowId === '') {
                                         //focus on the amount cell after dropdown closes
-                                        expenseAmount.contentEditable = true
-                                        expenseAmount.focus()
+                                        expenseAmountCell.contentEditable = true
+                                        expenseAmountCell.focus()
                                     }
                                     else if (rowId !== '') {
 
@@ -3788,40 +4005,142 @@ fetch('/currencies')
 
                             //CODE FOR THE  AMOUNT CELL EVENT HANDLER IF USER ENTERS THE AMOUNT , IT CALCULATE THE CASH EQUIVALENT VALUE BASED ON THE BASE CURRENCY SELECTED
                             //first make it editable
-                            expenseAmount.contentEditable = true
-                            expenseAmount.focus()
-                            // add an event listener to the cell for key press events
-                            expenseAmount.addEventListener("keydown", function (event) {
-                                // check if the pressed key is the enter key
-                                //find the base currency name
-                                const currencies = Array.from(newCurrencies).find(newCurrency => newCurrency.BASE_CURRENCY === 'Y');//find the base currency
-                                const keyCode = event.keyCode;
-                                if ((keyCode >= 48 && keyCode <= 57) || // numbers 0-9
-                                    (keyCode >= 96 && keyCode <= 105) ||
-                                    (keyCode == 13) ||
-                                    (keyCode == 8) || // backspace
-                                    (keyCode == 9) || // tab
-                                    (keyCode == 190) || (keyCode == 37 || keyCode == 39)) // tab) { // Enter key { // numeric keypad
-                                { // Allow input
-                                } else {
-                                    // Prevent input
-                                    event.preventDefault();
-                                }
-                                // prevent the default behavior of the enter key
-                                if (event.key === 'Enter') {
-                                    event.preventDefault();
-
-                                    itemsToProcess = []
-                                    // get the new value of the expense rate from the edited cell
-                                    const newCashFlowAmount = event.target.innerText;
-                                    if (newCashFlowAmount === '') {
-                                        notification('Field Can not Be Empty')
-                                        expenseAmount.focus(); // Remove focus from amount cell
-                                        return
+                            // expenseAmount.contentEditable = true
+                            // expenseAmount.focus()
+                            if (rowId !== '') {
+                                // add an event listener to the cell for key press events
+                                expenseAmount.addEventListener("keydown", function (event) {
+                                    // check if the pressed key is the enter key
+                                    //find the base currency name
+                                    const currencies = Array.from(newCurrencies).find(newCurrency => newCurrency.BASE_CURRENCY === 'Y');//find the base currency
+                                    const keyCode = event.keyCode;
+                                    if ((keyCode >= 48 && keyCode <= 57) || // numbers 0-9
+                                        (keyCode >= 96 && keyCode <= 105) ||
+                                        (keyCode == 13) ||
+                                        (keyCode == 8) || // backspace
+                                        (keyCode == 9) || // tab
+                                        (keyCode == 190) || (keyCode == 37 || keyCode == 39)) // tab) { // Enter key { // numeric keypad
+                                    { // Allow input
+                                    } else {
+                                        // Prevent input
+                                        event.preventDefault();
                                     }
-                                    else {
-                                        //check if the id is present
-                                        if (rowId === '') {
+                                    // prevent the default behavior of the enter key
+                                    if (event.key === 'Enter') {
+                                        event.preventDefault();
+
+                                        itemsToProcess = []
+                                        // get the new value of the expense rate from the edited cell
+                                        const newCashFlowAmount = event.target.innerText;
+                                        if (newCashFlowAmount === '') {
+                                            notification('Field Can not Be Empty')
+                                            expenseAmount.focus(); // Remove focus from amount cell
+                                            return
+                                        }
+                                        else {
+                                            if (rowId !== '') {
+                                                const newCurrency = newEmptyRow.querySelector('.currbtnSpan').innerText;
+                                                const cashFlowId = Array.from(cashFlowArray).find(ex => ex._id === rowId);//find the id equal to the expenseId
+
+                                                const selectedCurrency = Array.from(newCurrencies).find(newCurr => (newCurr.Currency_Name).toLowerCase() === (newCurrency).toLowerCase());
+                                                //calculate the relative rate to be used using the rate of the base currency and the selected currency
+                                                const relativeRate = (cashFlowId.CashFlowRate / currencies.RATE);
+                                                //calculate the cash equivalents 
+                                                const cashEquivValue3 = Number(parseFloat(newCashFlowAmount) / parseFloat(relativeRate)).toFixed(2);
+
+                                                //PLACE SYMBOLS WHERE APPROPRIATE
+                                                newEmptyRow.querySelector('.Equivsymbol').innerText = baseCurrCode;
+                                                newEmptyRow.querySelector('.cashEquivCell').innerText = Number(cashEquivValue3).toFixed(2);;//place the cash Equiv value on the cashEquiv cell
+
+                                                document.querySelector('.totalExpenses').innerText = Number(totalPayOutsRange).toFixed(2);
+                                                document.querySelector('.totalIncome').innerText = Number(totalPayInsRange).toFixed(2);
+                                                //UPDATE ALL TOTALS
+                                                const cashBalance = Number(parseFloat(totalPayInsRange + openingBalance) - parseFloat(totalPayOutsRange)).toFixed(2)
+
+                                                if (cashBalance < 0) {//if the number is negative
+                                                    const numberString = cashBalance.toString();//convert to string so that you can use the split method
+                                                    formattedValue = numberString.split('-')[1]
+                                                    sign = -1
+                                                    if (sign === -1) {
+                                                        document.querySelector('.CashBalance').style.color = 'red';
+                                                        const updatedValue = '-' + baseCurrCode + Number(formattedValue).toFixed(2);
+                                                        newEmptyRow.querySelector('.runningBalance').innerText = updatedValue
+                                                    }
+                                                }
+                                                else if (cashBalance >= 0) {
+                                                    document.querySelector('.CashBalance').style.color = 'black';
+                                                    document.querySelector('.CashBalance').innerText = baseCurrCode + '  ' + Number(cashBalance).toFixed(2);;//place the cash Equiv value on the cashEquiv cell
+                                                }
+                                                spinner.style.display = 'block';
+                                                expenseAmount.blur();//REMOVE FOCUS ON CELL
+                                                //NOW LOAD THE DATA IN THE CELLS INTO VARIABLES SO THAT THEY CAN BE SEND TO THE DATABASE FOR SAVING
+                                                fetch('/updateCashFlowAmount', {
+                                                    method: 'POST',
+                                                    headers: {
+                                                        'Content-Type': 'application/json'
+                                                    },
+                                                    body: JSON.stringify({
+                                                        rowId,
+                                                        newCashFlowAmount,
+                                                        cashEquivValue3,
+                                                        sessionId
+                                                    })
+                                                })
+                                                    .then(response => response.json())
+                                                    .then(data => {
+                                                        // Show alert
+                                                        if (data.amUpdated === true) {
+                                                            notification('Updated')
+                                                            spinner.style.display = 'none'
+                                                            // defaultDisplayContent2(startDate, endDate)
+                                                        }
+                                                        else {
+                                                            notification("Not updated..error occured");
+                                                            defaultDisplayContent2(startDate, endDate);
+
+                                                        }
+
+                                                    })
+                                                    .catch(error => {
+                                                        console.error(`Error updating base amount field for expense ID: ${rowId}`, error);
+                                                    });
+                                            }
+                                        }
+
+                                    }
+                                })
+                            }
+                            //check if the id is present
+                            if (rowId === '') {
+                                expenseAmountCell.addEventListener("keydown", function (event) {
+                                    // check if the pressed key is the enter key
+                                    //find the base currency name
+                                    const currencies = Array.from(newCurrencies).find(newCurrency => newCurrency.BASE_CURRENCY === 'Y');//find the base currency
+                                    const keyCode = event.keyCode;
+                                    if ((keyCode >= 48 && keyCode <= 57) || // numbers 0-9
+                                        (keyCode >= 96 && keyCode <= 105) ||
+                                        (keyCode == 13) ||
+                                        (keyCode == 8) || // backspace
+                                        (keyCode == 9) || // tab
+                                        (keyCode == 190) || (keyCode == 37 || keyCode == 39)) // tab) { // Enter key { // numeric keypad
+                                    { // Allow input
+                                    } else {
+                                        // Prevent input
+                                        event.preventDefault();
+                                    }
+                                    // prevent the default behavior of the enter key
+                                    if (event.key === 'Enter') {
+                                        event.preventDefault();
+
+                                        itemsToProcess = []
+                                        // get the new value of the expense rate from the edited cell
+                                        const newCashFlowAmount = event.target.innerText;
+                                        if (newCashFlowAmount === '') {
+                                            notification('Field Can not Be Empty')
+                                            expenseAmount.focus(); // Remove focus from amount cell
+                                            return
+                                        }
+                                        else {
                                             const newCurrency = newEmptyRow.querySelector('.currbtnSpan').innerText;
                                             //find the selected currency so that we take the rate
                                             const selectedCurrency = Array.from(newCurrencies).find(newCurr => (newCurr.Currency_Name).toLowerCase() === (newCurrency).toLowerCase());
@@ -3884,7 +4203,7 @@ fetch('/currencies')
                                             const selectedType = newEmptyRow.querySelector('.type').innerText;
                                             const CashFlowDescription = newEmptyRow.querySelector('.editable-cell').innerText;
                                             const Currency_Name = newEmptyRow.querySelector('.currbtnSpan').innerText;
-                                            const CashFlowAmount = parseFloat(newEmptyRow.querySelector('.expAmount').innerText);
+                                            const CashFlowAmount = parseFloat(newEmptyRow.querySelector('.amount-cell').innerText);
                                             const CashFlowRate = parseFloat(newEmptyRow.querySelector('.expRate').innerText);
 
 
@@ -3931,81 +4250,13 @@ fetch('/currencies')
                                             }
                                             //USE OUR ONE AND ONLY FUNCTION TO SAVE TO DATABASE
                                             if (itemsToProcess.length > 0) {
-                                                expenseAmount.blur(); // Remove focus from amount cell
+                                                expenseAmountCell.blur(); // Remove focus from amount cell
                                                 saveCashFlowRecord(itemsToProcess, sessionId)
                                             }
                                         }
-                                        else if (rowId !== '') {
-                                            const newCurrency = newEmptyRow.querySelector('.currbtnSpan').innerText;
-                                            const cashFlowId = Array.from(cashFlowArray).find(ex => ex._id === rowId);//find the id equal to the expenseId
-
-                                            const selectedCurrency = Array.from(newCurrencies).find(newCurr => (newCurr.Currency_Name).toLowerCase() === (newCurrency).toLowerCase());
-                                            //calculate the relative rate to be used using the rate of the base currency and the selected currency
-                                            const relativeRate = (cashFlowId.CashFlowRate / currencies.RATE);
-                                            //calculate the cash equivalents 
-                                            const cashEquivValue3 = Number(parseFloat(newCashFlowAmount) / parseFloat(relativeRate)).toFixed(2);
-
-                                            //PLACE SYMBOLS WHERE APPROPRIATE
-                                            newEmptyRow.querySelector('.Equivsymbol').innerText = baseCurrCode;
-                                            newEmptyRow.querySelector('.cashEquivCell').innerText = Number(cashEquivValue3).toFixed(2);;//place the cash Equiv value on the cashEquiv cell
-
-                                            document.querySelector('.totalExpenses').innerText = Number(totalPayOutsRange).toFixed(2);
-                                            document.querySelector('.totalIncome').innerText = Number(totalPayInsRange).toFixed(2);
-                                            //UPDATE ALL TOTALS
-                                            const cashBalance = Number(parseFloat(totalPayInsRange + openingBalance) - parseFloat(totalPayOutsRange)).toFixed(2)
-
-                                            if (cashBalance < 0) {//if the number is negative
-                                                const numberString = cashBalance.toString();//convert to string so that you can use the split method
-                                                formattedValue = numberString.split('-')[1]
-                                                sign = -1
-                                                if (sign === -1) {
-                                                    document.querySelector('.CashBalance').style.color = 'red';
-                                                    const updatedValue = '-' + baseCurrCode + Number(formattedValue).toFixed(2);
-                                                    newEmptyRow.querySelector('.runningBalance').innerText = updatedValue
-                                                }
-                                            }
-                                            else if (cashBalance >= 0) {
-                                                document.querySelector('.CashBalance').style.color = 'black';
-                                                document.querySelector('.CashBalance').innerText = baseCurrCode + '  ' + Number(cashBalance).toFixed(2);;//place the cash Equiv value on the cashEquiv cell
-                                            }
-                                            spinner.style.display = 'block';
-                                            expenseAmount.blur();//REMOVE FOCUS ON CELL
-                                            //NOW LOAD THE DATA IN THE CELLS INTO VARIABLES SO THAT THEY CAN BE SEND TO THE DATABASE FOR SAVING
-                                            fetch('/updateCashFlowAmount', {
-                                                method: 'POST',
-                                                headers: {
-                                                    'Content-Type': 'application/json'
-                                                },
-                                                body: JSON.stringify({
-                                                    rowId,
-                                                    newCashFlowAmount,
-                                                    cashEquivValue3,
-                                                    sessionId
-                                                })
-                                            })
-                                                .then(response => response.json())
-                                                .then(data => {
-                                                    // Show alert
-                                                    if (data.amUpdated === true) {
-                                                        notification('Updated')
-                                                        spinner.style.display = 'none'
-                                                        // defaultDisplayContent2(startDate, endDate)
-                                                    }
-                                                    else {
-                                                        notification("Not updated..error occured");
-                                                        defaultDisplayContent2(startDate, endDate);
-
-                                                    }
-
-                                                })
-                                                .catch(error => {
-                                                    console.error(`Error updating base amount field for expense ID: ${rowId}`, error);
-                                                });
-                                        }
                                     }
-
-                                }
-                            })
+                                })
+                            }
                             //==========================================================================================================
                             //LISTENER FOR RATE CELL
                             const cashFlowRate = newEmptyRow.querySelector('.expRate');
@@ -4101,6 +4352,10 @@ fetch('/currencies')
                                                     }
                                                     else {
                                                         notification("Not updated..error occured");
+                                                        const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                                        const eDate = localStorage.getItem('lastDate');
+                                                        const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                                        const endDate = new Date(eDate);
                                                         defaultDisplayContent2(startDate, endDate);
 
                                                     }
@@ -4192,11 +4447,20 @@ fetch('/currencies')
                                                         document.querySelector(".myCheck").checked = false
                                                     }
                                                     // location.href = "/advanceCashMngmnt"
+                                                    const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                                    const eDate = localStorage.getItem('lastDate');
+                                                    const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                                    const endDate = new Date(eDate);
                                                     defaultDisplayContent2(startDate, endDate)
+                                                    checkedRowsId = []
 
                                                 }
                                                 else {
                                                     notification("Not Deleted..error occured");
+                                                    const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                                    const eDate = localStorage.getItem('lastDate');
+                                                    const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                                    const endDate = new Date(eDate);
                                                     defaultDisplayContent2(startDate, endDate)
 
                                                 }
@@ -4411,7 +4675,6 @@ fetch('/currencies')
                                 .then(response => response.json())
                                 .then(data => {
                                     displayContainerBlocks()
-
                                     cashFlowArray = data.allCashFlows
                                     totalPages = data.totalPages2
                                     openingBalance = data.openingBalance
@@ -4995,6 +5258,13 @@ fetch('/currencies')
                                         }
                                         //THEN CREATE THE TABLE, on condition that there is something to add to it
                                         if (intervalRowCheck === true) {
+                                            //first remove all existing table rows
+                                            const allTableRow = document.querySelectorAll('.shiftRowss')
+                                            for (let a = 0; a < allTableRow.length; a++) {
+                                                const tRow = allTableRow[a];
+                                                tRow.style.display = 'none'
+                                            }
+                                            //display th other header of month total payin and total payout
                                             const myRow = document.createElement("tr");
                                             // const myRow = tablRows1.insertRow();
                                             myRow.classList.add('shiftRows')
@@ -5037,6 +5307,8 @@ fetch('/currencies')
                                                     dataArray[i].style.display = 'none';
                                                 }
                                             }
+                                            removeSpinner()
+
                                         }
                                     }
                                     //set the required vdetails in local storage
@@ -5329,19 +5601,157 @@ fetch('/currencies')
                         //DATE RANGE PICKER FUNCTION
                         initializeDateRangePicker()
                         function initializeDateRangePicker() {
-
+                            // alert(editMode)
                             //call this function based on which mode we are
                             const editMode = localStorage.getItem('editMode')
-                            if (editMode !== null) {
+                            if (editMode === null) {
+                                //load the loader here
+                                // displaySpinner()
+                                localStorage.removeItem('advCurrentPage')
+                                //display the import button
+                                document.querySelector('.importContainer').style.display = 'block';
+                                //now display the colums icon
+                                document.querySelector('.columns').style.display = 'block'
+                                //do remove the graph section
+                                document.querySelector('.second_card').style.display = 'none'
+                                //CLEAR ALL TABLE ROWS INCLUDING THE HEADING ROW SO THAT WE CAN ADD NEW ROWS TO ENTER ENTRIES
+                                const allTableRow = document.querySelectorAll('table tr')
+                                for (let a = 0; a < allTableRow.length; a++) {
+                                    const tRow = allTableRow[a];
+                                    tRow.style.display = 'none'
+                                }
+                                //create new table headers
+                                const table = document.querySelector('.shiftListTable');
+                                const thead = document.querySelector('.shift-list-headings');
+                                //create headers row
+                                const headersRow = document.createElement('tr');
+                                headersRow.classList.add('shift-list-row');
+                                headersRow.id = ('shift-list-rowId1')
+                                const checkboxHeader = document.createElement('th');
+                                const checkbox1 = document.createElement('input');
+                                checkbox1.type = 'checkbox';
+                                checkbox1.classList.add('myCheck');
+                                checkbox1.value = 'checkedValue';
 
-                                const sDate = localStorage.getItem('firstDate');
+                                checkboxHeader.appendChild(checkbox1);
+                                headersRow.appendChild(checkboxHeader);
+
+                                const hiddenCellHeader = document.createElement('th');
+                                hiddenCellHeader.hidden = true;
+
+                                headersRow.appendChild(hiddenCellHeader);
+
+                                const dateHeader = document.createElement('th');
+                                dateHeader.innerHTML = 'Date';
+                                headersRow.appendChild(dateHeader);
+
+                                const typeHeader = document.createElement('th');
+                                typeHeader.classList.add('typeHeaderClass')
+                                typeHeader.innerHTML = 'Type';
+                                headersRow.appendChild(typeHeader);
+
+                                const shiftHeader = document.createElement('th');
+                                shiftHeader.innerHTML = 'ShiftNo';
+                                headersRow.appendChild(shiftHeader);
+                                // THIS NOW ONLY WILL MAKE THE TD APPEAR OR DISAPPEAR
+                                const shiftstatus = Array.from(headersStatus).find(name => name.HeaderName === 'ShiftNo');
+                                if ((shiftstatus.isDisplayed == true)) {
+                                    //MAKE THE TD VISIBLE
+                                    shiftHeader.style.display = 'table-cell'
+                                } else {
+                                    if ((shiftstatus.isDisplayed == false)) {
+                                        //MAKE THE TD INVISIBLE
+                                        shiftHeader.style.display = 'none'
+                                    }
+                                }
+                                const vatHeader = document.createElement('th');
+                                vatHeader.innerHTML = 'Tax';
+                                headersRow.appendChild(vatHeader);
+                                const radiostatus = Array.from(headersStatus).find(name => name.HeaderName === 'Tax');
+                                if ((radiostatus.isDisplayed === true)) {
+                                    vatHeader.style.display = 'table-cell'
+
+                                }
+                                else if (radiostatus.isDisplayed == false) {
+                                    vatHeader.style.display = 'none'
+
+                                }
+                                const invoiceHeader = document.createElement('th');
+                                invoiceHeader.innerHTML = 'InvoiceRef';
+                                headersRow.appendChild(invoiceHeader);
+                                const invoiceStatus = Array.from(headersStatus).find(name => name.HeaderName === 'InvoiceRef');
+                                if ((invoiceStatus.isDisplayed === true)) {
+                                    invoiceHeader.style.display = 'table-cell'
+                                }
+                                else if (invoiceStatus.isDisplayed == false) {
+                                    invoiceHeader.style.display = 'none'
+                                }
+                                const descriptionHeader = document.createElement('th');
+                                descriptionHeader.innerHTML = 'Description';
+                                headersRow.appendChild(descriptionHeader);
+                                const categoryHeader = document.createElement('th');
+                                categoryHeader.innerHTML = 'Category';
+                                headersRow.appendChild(categoryHeader);
+                                const currencyHeader = document.createElement('th');
+                                currencyHeader.innerHTML = 'Currency';
+                                headersRow.appendChild(currencyHeader);
+                                const amountHeader = document.createElement('th');
+                                amountHeader.innerHTML = 'Amount';
+                                headersRow.appendChild(amountHeader);
+                                const rateHeader = document.createElement('th');
+                                rateHeader.innerHTML = 'Rate';
+                                const rateHeaderText = document.createElement('p');
+                                rateHeaderText.classList.add('headerText')
+                                rateHeaderText.innerText = '(Relative to ' + baseCurrCode + ')'
+                                rateHeader.appendChild(rateHeaderText);
+                                headersRow.appendChild(rateHeader);
+                                const cashEquivHeader = document.createElement('th');
+                                cashEquivHeader.innerHTML = 'CashEquiv';
+                                const cashEquivHeaderText = document.createElement('p');
+                                cashEquivHeaderText.classList.add('headerText')
+                                cashEquivHeaderText.innerText = '(Relative to ' + baseCurrCode + ')'
+                                cashEquivHeader.appendChild(cashEquivHeaderText);
+                                headersRow.appendChild(cashEquivHeader);
+                                const cashstatus = Array.from(headersStatus).find(name => name.HeaderName === 'CashEquiv');
+                                if ((cashstatus.isDisplayed === true)) {
+                                    cashEquivHeader.style.display = 'table-cell'
+
+                                }
+                                else if (cashstatus.isDisplayed == false) {
+                                    cashEquivHeader.style.display = 'none'
+                                }
+                                const runningBalHeader = document.createElement('th');
+                                runningBalHeader.innerHTML = 'RunningBalance';
+                                headersRow.appendChild(runningBalHeader);
+                                const profitStatus = Array.from(headersStatus).find(name => name.HeaderName === 'RunningBalance');
+                                if ((profitStatus.isDisplayed === true)) {
+                                    runningBalHeader.style.display = 'table-cell'
+                                }
+                                else if (profitStatus.isDisplayed == false) {
+                                    runningBalHeader.style.display = 'none'
+                                }
+
+                                thead.appendChild(headersRow)
+                                //NOW CREATE A NEW TABLE WITH NEW HEADINGS
+                                const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
                                 const eDate = localStorage.getItem('lastDate');
-                                startDate = new Date(sDate)
-                                endDate = new Date(eDate)
+                                let startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                let endDate = new Date(eDate);
+
                                 defaultDisplayContent2(startDate, endDate)
 
+                                //CHANGE THE TEXT OF EDUT BUTTON TO VISUALS so that user can click to go back ku graph
+                                const editBtn = document.querySelector('.editBtn');
+                                editBtn.textContent = 'Visuals'
+                                //GET THE SEARCH INPUT IN LOCAL STORAGE
+                                const advancedSearchInput = localStorage.getItem('advSearchInput');
+                                document.getElementById('searchInput').value = advancedSearchInput
+                                //DISPLAY THE SEARCH BUTTON
+                                document.querySelector('.searchBar').style.display = 'block'
+
+
                             }
-                            else if (editMode === null) {
+                            else if (editMode !== null) {
 
                                 localStorage.removeItem('advCurrentPage')
                                 //OPEN DROPDOWN ONCE THE SELECT INTERVAL IS CLICKED
@@ -5797,21 +6207,26 @@ fetch('/currencies')
                                         selectedDate = "";
                                     }
                                     //CALL THE DEFAUALT DISPLAY FUNCTION
-                                    startDate = new Date(startDate)
-                                    endDate = new Date(endDate)
+
                                     //call this function based on which mode we are
                                     const editMode = localStorage.getItem('editMode')
                                     //set current page to one
                                     currentPage = 1
                                     localStorage.setItem('advCurrentPage', currentPage)
-
-                                    if (editMode === null) {
+                                    // alert('editmode' + editMode)
+                                    // alert('startDate' + startDate)
+                                    // alert('endDate' + endDate)
+                                    if (editMode !== null) {
+                                        startDate = new Date(startDate)
+                                        endDate = new Date(endDate)
                                         removeContainerBlocks()
                                         defaultDisplayContent(startDate, endDate)
                                     }
-                                    else if (editMode !== null) {
+                                    if (editMode === null) {
                                         //load the loader here
                                         displaySpinner()
+                                        startDate = new Date(startDate)
+                                        endDate = new Date(endDate)
                                         defaultDisplayContent2(startDate, endDate)
                                     }
                                 },
@@ -5859,7 +6274,7 @@ fetch('/currencies')
 
                                     //store the entered numbers to LS
                                     localStorage.setItem('advCurrentPage', parseInt(document.querySelector('.spanText').innerText))
-                                    if (isEditMode === false) {
+                                    if (isEditMode === true) {
                                         totalPages = Math.ceil(dataArray.length / pageSize);
                                         const startIndex = (parseInt(event.target.innerText) - 1) * parseInt(pageSize);
                                         const endIndex = startIndex + parseInt(pageSize);
@@ -5873,7 +6288,7 @@ fetch('/currencies')
                                             }
                                         }
                                     }
-                                    else if (isEditMode === true) {
+                                    else if (isEditMode === false) {
                                         //call the default display function
                                         defaultDisplayContent2(startDate, endDate)
                                     }
@@ -5909,7 +6324,7 @@ fetch('/currencies')
                                 localStorage.setItem('advItemsPerPage', advItemsPerPage);
                                 localStorage.setItem('advCurrentPage', currentPage);
                                 //THIS SHOULD JUST CALL THE DEFAULT DISPLAY
-                                if (isEditMode === false) {
+                                if (isEditMode === true) {
                                     pageSize = localStorage.getItem('advItemsPerPage')
                                     const startIndex = (currentPage - 1) * pageSize;
                                     const endIndex = parseFloat(startIndex) + parseFloat(pageSize);
@@ -5924,7 +6339,11 @@ fetch('/currencies')
                                         }
                                     }
                                 }
-                                else if (isEditMode === true) {
+                                else if (isEditMode === false) {
+                                    const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                    const eDate = localStorage.getItem('lastDate');
+                                    const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                    const endDate = new Date(eDate);
                                     defaultDisplayContent2(startDate, endDate)
                                 }
                             });
@@ -5937,7 +6356,7 @@ fetch('/currencies')
                                 currentPage--; //decrement the pages
                                 document.querySelector('.spanText').innerText = currentPage
                                 localStorage.setItem('advCurrentPage', currentPage);
-                                if (isEditMode === false) {
+                                if (isEditMode === true) {
                                     // defaultDisplayContent(startDate, endDate)
                                     const startIndex = (currentPage - 1) * pageSize;
                                     const endIndex = parseFloat(startIndex) + parseFloat(pageSize);
@@ -5949,7 +6368,11 @@ fetch('/currencies')
                                         }
                                     }
                                 }
-                                else if (isEditMode === true) {
+                                else if (isEditMode === false) {
+                                    const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                    const eDate = localStorage.getItem('lastDate');
+                                    const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                    const endDate = new Date(eDate);
                                     defaultDisplayContent2(startDate, endDate)
                                 }
                             }
@@ -5957,7 +6380,7 @@ fetch('/currencies')
                                 currentPage = totalPages
                                 document.querySelector('.spanText').innerText = currentPage
                                 localStorage.setItem('advCurrentPage', currentPage);
-                                if (isEditMode === false) {
+                                if (isEditMode === true) {
                                     const startIndex = (currentPage - 1) * pageSize;
                                     const endIndex = parseFloat(startIndex) + parseFloat(pageSize);
                                     for (let i = 0; i < dataArray.length; i++) {
@@ -5968,7 +6391,11 @@ fetch('/currencies')
                                         }
                                     }
                                 }
-                                else if (isEditMode === true) {
+                                else if (isEditMode === false) {
+                                    const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                    const eDate = localStorage.getItem('lastDate');
+                                    const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                    const endDate = new Date(eDate);
                                     defaultDisplayContent2(startDate, endDate)
                                 }
                             }
@@ -5980,7 +6407,7 @@ fetch('/currencies')
                                 currentPage++;//increment the currentpage by1
                                 document.querySelector('.spanText').innerText = currentPage
                                 localStorage.setItem('advCurrentPage', currentPage);
-                                if (isEditMode === false) {
+                                if (isEditMode === true) {
                                     const startIndex = (currentPage - 1) * pageSize;
                                     const endIndex = parseFloat(startIndex) + parseFloat(pageSize);
                                     for (let i = 0; i < dataArray.length; i++) {
@@ -5991,7 +6418,11 @@ fetch('/currencies')
                                         }
                                     }
                                 }
-                                else if (isEditMode === true) {
+                                else if (isEditMode === false) {
+                                    const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                    const eDate = localStorage.getItem('lastDate');
+                                    const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                    const endDate = new Date(eDate);
                                     defaultDisplayContent2(startDate, endDate)
                                 }
                             }
@@ -5999,7 +6430,7 @@ fetch('/currencies')
                                 currentPage = 1
                                 document.querySelector('.spanText').innerText = currentPage
                                 localStorage.setItem('advCurrentPage', currentPage);
-                                if (isEditMode === false) {
+                                if (isEditMode === true) {
                                     const startIndex = (currentPage - 1) * pageSize;
                                     const endIndex = parseFloat(startIndex) + parseFloat(pageSize);
                                     for (let i = 0; i < dataArray.length; i++) {
@@ -6010,7 +6441,11 @@ fetch('/currencies')
                                         }
                                     }
                                 }
-                                else if (isEditMode === true) {
+                                else if (isEditMode === false) {
+                                    const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                    const eDate = localStorage.getItem('lastDate');
+                                    const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                    const endDate = new Date(eDate);
                                     defaultDisplayContent2(startDate, endDate)
                                 }
                             }
@@ -6170,11 +6605,11 @@ fetch('/currencies')
                             }
                             //upload as per shift
                             // Get the first shift number (in the first row) for comparison
-                            const firstShift = csvContent[1].split(',')[3]; //  Shift number is in the 4th column (index 3)
-                            console.log(csvContent)
+                            const firstShift = csvContent[1].split(/[,;]/)[3]; //  Shift number is in the 4th column (index 3)
                             // Check for different shifts in the CSV
                             for (let i = 1; i < csvContent.length - 1; i++) { // Start from 1 to skip the header row
-                                const row = csvContent[i].split(','); // Split each row by commas
+                                // const row = csvContent[i].split(','); // Split each row by commas
+                                const row = csvContent[i].split(/[,;]/);
                                 const shift = row[3]; //  Shift number is in the 4th column (index 3)
                                 // If a different shift number is found, alert an error and stop processing
                                 if (shift !== firstShift) {
@@ -6182,6 +6617,7 @@ fetch('/currencies')
                                     errorMsgs.push(error)
                                     break;
                                 }
+
                             }
                             //display the errors if they exist
                             if (errorMsgs.length > 0) {
@@ -6236,16 +6672,21 @@ fetch('/currencies')
 
                                     //after the upload process is successfully done,show the table and remove spinner
 
-                                    // display the modal with the total inserted count
-                                    successModal.style.display = 'block'
-                                    successModalText.innerText = data.documents.length
-                                    document.querySelector('.uploadData').style.display = 'block'
-                                    displaySpinner()
                                     const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
                                     const eDate = localStorage.getItem('lastDate');
                                     const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
                                     const endDate = new Date(eDate);
                                     defaultDisplayContent2(startDate, endDate)
+                                    // display the modal with the total inserted count
+                                    successModal.style.display = 'block'
+                                    successModalText.innerText = data.documents.length
+                                    document.querySelector('.importText').innerText = 'Import Completed'
+                                    document.querySelector('.importText').style.color = 'black'
+                                    document.querySelector('.uploadData').style.display = 'block'
+                                    document.querySelector('.noUploadData').style.display = 'none'
+                                    document.querySelector('.checkmark-circle').style.display = 'inline-block'
+                                    document.querySelector('.uploadError').style.display = 'none'
+                                    displaySpinner()
                                     //update the categories arrays
                                     let dbDocs = data.categoriesDocs;
                                     for (let i = 0; i < dbDocs.length; i++) {
@@ -6258,24 +6699,44 @@ fetch('/currencies')
                                                 console.log('Document not added: category is "suspense".');
                                             }
                                         }
+                                        if (doc.Balance === 'PayIn') {
+                                            //cjheck if suspense already exisit
+                                            if (doc.category.replace(/ /g, "_").toLowerCase() !== 'suspense') {
+                                                newIncomeCategories.push(doc); // Push only if category is not 'suspense'
+                                            } else {
+                                                console.log('Document not added: category is "suspense".');
+                                            }
+                                        }
 
                                     }
                                     // updateFilterByCategory(startDate, endDate)
                                     console.log("Data successfully processed and saved.");
                                 } else {
+                                    let message = ''
+                                    if (data.isSaving === false) {
+                                        message = 'No cashflows uploaded,cashflows already exist'
+                                    }
+                                    else {
+                                        message = 'Failed to upload.Please try again'
 
-                                    // display the modal with the total inserted count
-                                    successModal.style.display = 'block'
-                                    successModalText.innerText = payOutArray.length
-                                    document.querySelector('.uploadData').style.display = 'block'
-                                    //after the upload process is successfully done,show the table and remove spinner
-                                    removeSpinner()
+                                    }
                                     const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
                                     const eDate = localStorage.getItem('lastDate');
                                     const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
                                     const endDate = new Date(eDate);
                                     defaultDisplayContent2(startDate, endDate)
-                                    console.error("Error:", data.isSaving);
+                                    // display the modal with the total inserted count
+                                    successModal.style.display = 'block'
+                                    successModalText.innerText = data.documents.length
+                                    document.querySelector('.importText').innerText = 'Import Completed'
+                                    document.querySelector('.importText').style.color = 'black'
+                                    document.querySelector('.noUploadData').style.display = 'block'
+                                    document.querySelector('.noUploadData').innerText = message
+                                    document.querySelector('.checkmark-circle').style.display = 'inline-block'
+                                    document.querySelector('.uploadError').style.display = 'none'
+                                    //after the upload process is successfully done,show the table and remove spinner
+                                    removeSpinner()
+                                    // console.error("Error:", data.isSaving);
                                 }
                             } catch (error) {
                                 console.error("Error uploading CSV:", error);
