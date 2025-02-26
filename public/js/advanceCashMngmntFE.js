@@ -1,6 +1,6 @@
 
 import { WorldCurrencies } from "./worldCurrency.js";
-import moment from "moment/moment.min.js";
+import moment from "./moment/moment.js";
 
 let newCurrencies = []; let newIncomeCategories = [];
 let newExpenseCategories = []; let startDate = ""; let endDate = ""; let isoCode = ''; let symbol = ''; let selectedDate = ''; let dataArray = []; let checkedRows = []; let headersStatus = []; let formattedValue = ''
