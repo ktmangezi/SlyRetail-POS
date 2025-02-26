@@ -1,5 +1,7 @@
 
 import { WorldCurrencies } from "./worldCurrency.js";
+import moment from "moment";
+
 let newCurrencies = []; let newIncomeCategories = [];
 let newExpenseCategories = []; let startDate = ""; let endDate = ""; let isoCode = ''; let symbol = ''; let selectedDate = ''; let dataArray = []; let checkedRows = []; let headersStatus = []; let formattedValue = ''
 let sign = ''; let openingBalance = 0; let currentPage; let isEditMode = false; let advItemsPerPage; let totalPayOutsRange = 0; let totalPayInsRange = 0; let checkedRowsId = []
