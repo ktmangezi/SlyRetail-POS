@@ -1188,6 +1188,7 @@ fetch('/currencies')
                             else {
                                 page = page
                             }
+                            console.log(page)
                             const advancedSearchInput = localStorage.getItem('advSearchInput');
                             //apply a loader 
                             fetch('/defaultDisplayThePaginationWay', {
@@ -2633,7 +2634,16 @@ fetch('/currencies')
 
                                                     }
                                                     else {
-                                                        notification("Not updated..error occured");
+                                                        let message = ''
+                                                        if (data.amUpdated === false) {
+                                                            message = 'The data was already up to date'
+                                                        }
+                                                        else {
+                                                            message = 'Failed to update.Please try again'
+
+                                                        }
+
+                                                        notification(message);
                                                         const sDate =
                                                             localStorage.getItem("firstDate"); //DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
                                                         const eDate =
@@ -2923,7 +2933,16 @@ fetch('/currencies')
                                                     defaultDisplayContent2(startDate, endDate)
                                                 }
                                                 else {
-                                                    notification('Not updated..error occured')
+                                                    let message = ''
+                                                    if (data.amUpdated === false) {
+                                                        message = 'The data was already up to date'
+                                                    }
+                                                    else {
+                                                        message = 'Failed to update.Please try again'
+
+                                                    }
+
+                                                    notification(message);
                                                     spinner.style.display = 'none'
                                                     defaultDisplayContent2(startDate, endDate)
                                                 }
@@ -3399,7 +3418,16 @@ fetch('/currencies')
                                             defaultDisplayContent2(startDate, endDate)
                                         }
                                         else {
-                                            notification("Not updated..error occured");
+                                            let message = ''
+                                            if (data.amUpdated === false) {
+                                                message = 'The data was already up to date'
+                                            }
+                                            else {
+                                                message = 'Failed to update.Please try again'
+
+                                            }
+
+                                            notification(message);
                                             defaultDisplayContent2(startDate, endDate);
 
                                         }
@@ -3467,7 +3495,16 @@ fetch('/currencies')
                                                     // defaultDisplayContent2(startDate, endDate)
                                                 }
                                                 else {
-                                                    notification("Not updated..error occured");
+                                                    let message = ''
+                                                    if (data.amUpdated === false) {
+                                                        message = 'The data was already up to date'
+                                                    }
+                                                    else {
+                                                        message = 'Failed to update.Please try again'
+
+                                                    }
+
+                                                    notification(message);
                                                     defaultDisplayContent2(startDate, endDate);
 
                                                 }
@@ -3744,7 +3781,16 @@ fetch('/currencies')
                                                     spinner.style.display = 'none'
                                                     // defaultDisplayContent2(startDate, endDate)
                                                 } else {
-                                                    notification("Not updated..error occured");
+                                                    let message = ''
+                                                    if (data.amUpdated === false) {
+                                                        message = 'The data was already up to date'
+                                                    }
+                                                    else {
+                                                        message = 'Failed to update.Please try again'
+
+                                                    }
+
+                                                    notification(message);
                                                     defaultDisplayContent2(startDate, endDate);
 
                                                 }
@@ -3864,7 +3910,16 @@ fetch('/currencies')
                                             notification("Updated");
                                         }
                                         else {
-                                            notification("Not updated..error occured");
+                                            let message = ''
+                                            if (data.amUpdated === false) {
+                                                message = 'The data was already up to date'
+                                            }
+                                            else {
+                                                message = 'Failed to update.Please try again'
+
+                                            }
+
+                                            notification(message);
                                             defaultDisplayContent2(startDate, endDate);
 
                                         }
@@ -4001,7 +4056,16 @@ fetch('/currencies')
                                             // defaultDisplayContent2(startDate, endDate)
                                         }
                                         else {
-                                            notification("Not updated..error occured");
+                                            let message = ''
+                                            if (data.amUpdated === false) {
+                                                message = 'The data was already up to date'
+                                            }
+                                            else {
+                                                message = 'Failed to update.Please try again'
+
+                                            }
+
+                                            notification(message);
                                             defaultDisplayContent2(startDate, endDate);
 
                                         }
@@ -4107,7 +4171,16 @@ fetch('/currencies')
                                                             // defaultDisplayContent2(startDate, endDate)
                                                         }
                                                         else {
-                                                            notification("Not updated..error occured");
+                                                            let message = ''
+                                                            if (data.amUpdated === false) {
+                                                                message = 'The data was already up to date'
+                                                            }
+                                                            else {
+                                                                message = 'Failed to update.Please try again'
+
+                                                            }
+
+                                                            notification(message);
                                                             defaultDisplayContent2(startDate, endDate);
 
                                                         }
@@ -4363,7 +4436,16 @@ fetch('/currencies')
                                                         // defaultDisplayContent2(startDate, endDate)
                                                     }
                                                     else {
-                                                        notification("Not updated..error occured");
+                                                        let message = ''
+                                                        if (data.amUpdated === false) {
+                                                            message = 'The data was already up to date'
+                                                        }
+                                                        else {
+                                                            message = 'Failed to update.Please try again'
+
+                                                        }
+
+                                                        notification(message);
                                                         const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
                                                         const eDate = localStorage.getItem('lastDate');
                                                         const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
@@ -4491,6 +4573,8 @@ fetch('/currencies')
                             const page = localStorage.getItem('advCurrentPage')// VARIABLE IN THE LOCAL STORAGE, IF THERE IS NON WE TAKE PAGE1
                             //THEN LET THE SERVER STORE IT IN THE DATABASE
                             // displaySpinner()
+                            notification("Saving Data.....");
+
                             fetch('/saveCashflow', { //THIS IS AN API END POINT TO CARRY THE VARIABLE NAMES TO ANOTHER JS MODULE WHICH WILL BE THE SEVER
                                 method: 'POST',
                                 headers: {
@@ -4547,10 +4631,12 @@ fetch('/currencies')
                                         }
 
                                         localStorage.setItem('advCurrentPage', currentPage)// VARIABLE IN THE LOCAL STORAGE, IF THERE IS NON WE TAKE PAGE1
+                                        notification("Saved");
+
                                         defaultDisplayContent2(startDate, endDate);
                                     } else {
                                         // Error saving data
-                                        console.error('Error saving data');
+
                                         spinner.style.display = 'none';
                                         const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
                                         const eDate = localStorage.getItem('lastDate');
@@ -4558,7 +4644,7 @@ fetch('/currencies')
                                         const endDate = new Date(eDate);
                                         defaultDisplayContent2(startDate, endDate);
                                         displayContainerBlocks()
-                                        notification("Not updated..error occured");
+                                        notification("Not Saved..error occured");
 
 
                                     }
@@ -6741,6 +6827,7 @@ fetch('/currencies')
                                     successModalText.innerText = data.documents.length
                                     document.querySelector('.importText').innerText = 'Import Completed'
                                     document.querySelector('.importText').style.color = 'black'
+                                    document.querySelector('.uploadData').style.display = 'none'
                                     document.querySelector('.noUploadData').style.display = 'block'
                                     document.querySelector('.noUploadData').innerText = message
                                     document.querySelector('.checkmark-circle').style.display = 'inline-block'
