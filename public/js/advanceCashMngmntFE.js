@@ -4534,6 +4534,7 @@ fetch('/currencies')
                                             })
                                             .then(data => {
                                                 if (data.amDeleted === true) {
+                                                    checkedRowsId = []
                                                     notification("Deleted");
                                                     currentPage = 1
                                                     localStorage.setItem('advCurrentPage', currentPage)
@@ -4546,7 +4547,7 @@ fetch('/currencies')
                                                     const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
                                                     const endDate = new Date(eDate);
                                                     defaultDisplayContent2(startDate, endDate)
-                                                    checkedRowsId = []
+
 
                                                 }
                                                 else {
