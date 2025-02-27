@@ -979,7 +979,7 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
                 if (data.Id === '') {
                     // id = data.Id
                     if (data.Category === '') {
-                        data.Category = 'please'
+                        data.Category = 'suspense'
                     }
                     else {
                         data.Category = data.Category
