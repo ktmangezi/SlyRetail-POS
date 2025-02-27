@@ -12,6 +12,7 @@ let amUpdated = false;
 let modifiedCount;
 let amDeleted = false;
 let isSaving = false;
+let isSaved = false;
 let insertedDocuments = [];
 let updatedDocuments = [];
 let insertedCategories = [];
@@ -261,7 +262,9 @@ export async function updateCashFlowDate(req, rowId, newDate, sessionId) {
             return { amUpdated };
         }
     } catch (err) {
-        console.error('Error connecting to MongoDB:', err);
+        console.error('Error updating date:', err);
+        return { amUpdated: 'Failed to update,please try again' }
+
     }
 }
 //=================================================================================================
@@ -320,7 +323,9 @@ export async function updateCashFlowType(req, rowId, typeSelected, sessionId) {
         }
 
     } catch (err) {
-        console.error('Error connecting to MongoDB:', err);
+        console.error('Error updating type:', err);
+        return { amUpdated: 'Failed to update,please try again' }
+
     }
 }
 // //=====================================================================================================
@@ -356,7 +361,9 @@ export async function updateCashFlowShift(req, rowId, shift, sessionId) {
             return { amUpdated };
         }
     } catch (err) {
-        console.error('Error connecting to MongoDB:', err);
+        console.error('Error updating shift:', err);
+        return { amUpdated: 'Failed to update,please try again' }
+
     }
 }
 //====================================================================================================
@@ -374,8 +381,7 @@ export async function updateCashFlowTax(req, rowId, taxDataToUpdate, sessionId) 
                 const [dayB, monthB, yearB] = b.CashFlowDate.split('/');
                 return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
             });
-            console.log(taxDataToUpdate)
-            console.log(taxDataToUpdate.length)
+
             for (let v = 0; v < taxDataToUpdate.length; v++) {
                 const tax = taxDataToUpdate[v];
                 if (tax.taxName === 'vat') {
@@ -485,7 +491,9 @@ export async function updateCashFlowTax(req, rowId, taxDataToUpdate, sessionId) 
         }
 
     } catch (err) {
-        console.error('Error connecting to MongoDB:', err);
+        console.error('Error updating tax:', err);
+        return { amUpdated: 'Failed to update,please try again' }
+
     }
 }
 //=====================================================================================================
@@ -522,7 +530,9 @@ export async function updateCashFlowInvoice(req, rowId, InvoiceRef, sessionId) {
             return { amUpdated };
         }
     } catch (err) {
-        console.error('Error connecting to MongoDB:', err);
+        console.error('Error updating invoice number:', err);
+        return { amUpdated: 'Failed to update,please try again' }
+
     }
 }
 //=====================================================================================================
@@ -558,7 +568,9 @@ export async function updateCashFlowDescription(req, rowId, description, session
             return { amUpdated };
         }
     } catch (err) {
-        console.error('Error connecting to MongoDB:', err);
+        console.error('Error updating description:', err);
+        return { amUpdated: 'Failed to update,please try again' }
+
     }
 }
 //=====================================================================================================
@@ -591,7 +603,9 @@ export async function updateCashFlowCategory(req, rowId, newCategory, sessionId)
             return { amUpdated };
         }
     } catch (err) {
-        console.error('Error connecting to MongoDB:', err);
+        console.error('Error updating:', err);
+        return { amUpdated: 'Failed to update,please try again' }
+
     }
 }
 //====================================================================================================================
@@ -629,7 +643,9 @@ export async function updateCashFlowCurrency(req, rowId, newCurrency, cashEquivV
             return { amUpdated };
         }
     } catch (err) {
-        console.error('Error connecting to MongoDB:', err);
+        console.error('Error updating:', err);
+        return { amUpdated: 'Failed to update,please try again' }
+
     }
 }
 //=====================================================================================================
@@ -665,7 +681,9 @@ export async function updateCashFlowAmount(req, rowId, newAmount, cashEquivValue
             return { amUpdated };
         }
     } catch (err) {
-        console.error('Error connecting to MongoDB:', err);
+        console.error('Error updating amount:', err);
+        return { amUpdated: 'Failed to update,please try again' }
+
     }
 }
 //====================================================================================================================
@@ -702,7 +720,9 @@ export async function updateCashFlowRate(req, rowId, newRate, newCashFlowCashEqu
             return { amUpdated };
         }
     } catch (err) {
-        console.error('Error connecting to MongoDB:', err);
+        console.error('Error updating rate:', err);
+        return { amUpdated: 'Failed to update,please try again' }
+
     }
 }
 //====================================================================================================================
@@ -865,15 +885,14 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
             // console.log(itemsToProcess)
             const relativeRate = theRate / baseCurrency.RATE;
             const cashEquivValue = Number(parseFloat(amount) / parseFloat(relativeRate)).toFixed(2);
-            console.log(category + 'category')
 
             const rowData = {
                 CashFlowDate: correctFormattedDate, //RE VALIDATE JUST TO BE SURE
                 CashFlowType: type,
                 CashFlowShift: shift,
                 CashFlowInvoiceRef: invoiceNo,
-                CashFlowDescription: description || `Unknown ${type}`,
-                CashFlowCategory: category || 'suspense',
+                CashFlowDescription: description,
+                CashFlowCategory: category,
                 CashFlowCurrency: currency || baseCurrency.Currency_Name,
                 CashFlowAmount: amount,
                 CashFlowRate: theRate,
@@ -927,10 +946,11 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
             const match = allCategories.some(doc => {
                 const categoryFromDb = doc.category.toLowerCase();  // Assuming 'category' is a field in your model
                 const categoryEnteredByUser = category.toLowerCase();  // Normalize user input
+                console.log(categoryFromDb)
+                console.log(categoryEnteredByUser)
                 // Check if any letter from the user input exists in the category from the database
                 return categoryFromDb.includes(categoryEnteredByUser);
             });
-
             if (!match) {
 
                 let payInCat = {}; //THE NEW DOCUMEN
@@ -958,6 +978,18 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
             if (checkTemplateStatus === 'slyRetailHeaders') {
                 if (data.Id === '') {
                     // id = data.Id
+                    if (data.Category === '') {
+                        data.Category = 'please'
+                    }
+                    else {
+                        data.Category = data.Category
+                    }
+                    if (data.Description === '') {
+                        data.Description = `Unknown ${data.Type}`
+                    }
+                    else {
+                        data.Description = data.Description
+                    }
                     date = data.Date; shift = data.ShiftNo; type = data.Type; invoiceNo = data.InvoiceRef;
                     description = data.Description; currency = data.Currency; category = data.Category;
                     amount = data.Amount; rate = data.Rate
@@ -1022,7 +1054,7 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
                         }
                     } catch (error) {
                         console.error('Error updating document:', error);
-                        isSaving = false;
+                        isSaving = 'Error updating document';
                     }
                 }
             }
@@ -1061,7 +1093,7 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
             insertedDocuments = await myCashflowModel.find({ _id: { $in: insertedIds } });
 
         } else {
-            // return { isSaving: false, insertedDocuments: [] };
+            return { isSaving: false, insertedDocuments: [] };
         }
         //then save any new categories
 
@@ -1071,16 +1103,16 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
                 try {
                     const result = await categoryEntry.save();
                     if (result) {
-                        isSaving = true;
+                        isSaved = true;
                         insertedCategories.push(result); // Store the successfully inserted document
                     }
                 } catch (saveError) {
-                    console.error('Error saving cash flow entry:', saveError);
-                    isSaving = false;
+                    console.error('Error saving category entry:', saveError);
+                    isSaved = false;
                 }
             } catch (error) {
                 console.error('Error inserting documents:', error);
-                // return { isSaving: false };
+                return { isSaved: false };
             }
         }
         return { isSaving, insertedDocuments, insertedCategories }
