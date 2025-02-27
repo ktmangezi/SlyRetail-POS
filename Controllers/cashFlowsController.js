@@ -1105,7 +1105,8 @@ export async function saveCashFlowData(req, itemsToProcess, sessionId) {
                     const result = await cashflowentry.save();
                     if (result) {
                         isSaving = true;
-                        insertedCategories.push(result); // Store the successfully inserted document
+                        insertedDocuments = await myCashflowModel.find();
+
                     }
                 } catch (saveError) {
                     console.error('Error saving cash flow entry:', saveError);
