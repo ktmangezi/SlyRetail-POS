@@ -4513,7 +4513,6 @@ fetch('/currencies')
                         })
                         //when the yes button is clicked
                         yesDeleteRows.addEventListener('click', (event) => {
-                            alert('ahahah')
                             if (checkedRowsId.length > 0) {
                                 //  Hide the delete modal
                                 deleteModal.style.display = 'none';
