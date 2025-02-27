@@ -1181,7 +1181,6 @@ fetch('/currencies')
                                 pageSize = pageSize
                             }
                             page = localStorage.getItem('advCurrentPage')// VARIABLE IN THE LOCAL STORAGE, IF THERE IS NON WE TAKE PAGE1
-                            alert(page + 'page mmm')
                             //check if the page is empty or if the painfilter is not empty and that we are in the filtering mode
                             if (page === null) {
                                 page = 1
@@ -3250,7 +3249,6 @@ fetch('/currencies')
                                         const editableTextTinNumber = newEmptyRow.querySelector(`#editable-vattext4`).innerText; // VatNumber field
                                         editableTextVatAmount = Number(newEmptyRow.querySelector(`#editable-vattext5`).innerText.trim()); // VatAmount field
 
-                                        //    alert(editableTextVatAmount) // Create a vatEntry object with the collected data
                                         //check if all the data is not equal to defaults values
                                         if (editableTextVatAmount === 0) {
                                             VatStatus = 'N'
@@ -3800,11 +3798,10 @@ fetch('/currencies')
                                     // Open the currency dropdown
                                     const currencyDropdownButton = newEmptyRow.querySelector('.currbtnSpan');
                                     if (currencyDropdownButton) {
-                                        alert('i exist')
                                         const currencyDropdown = new bootstrap.Dropdown(currencyDropdownButton);
                                         currencyDropdown.toggle(); // Open the currency dropdown
                                     } else {
-                                        alert("Currency dropdown button not found!");
+                                        console.log("Currency dropdown button not found!");
                                     }
                                 });
                             });
@@ -5618,13 +5615,10 @@ fetch('/currencies')
                         //DATE RANGE PICKER FUNCTION
                         initializeDateRangePicker()
                         function initializeDateRangePicker() {
-                            // alert(editMode)
                             //call this function based on which mode we are
                             const editMode = localStorage.getItem('editMode')
                             if (editMode === null) {
                                 //load the loader here
-                                // displaySpinner()
-                                // localStorage.removeItem('advCurrentPage')
                                 //display the import button
                                 document.querySelector('.importContainer').style.display = 'block';
                                 //now display the colums icon
