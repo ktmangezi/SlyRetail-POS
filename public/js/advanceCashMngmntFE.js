@@ -1,7 +1,5 @@
 
 import { WorldCurrencies } from "./worldCurrency.js";
-// import moment from "./moment/moment.js";
-
 let newCurrencies = []; let newIncomeCategories = [];
 let newExpenseCategories = []; let startDate = ""; let endDate = ""; let isoCode = ''; let symbol = ''; let selectedDate = ''; let dataArray = []; let checkedRows = []; let headersStatus = []; let formattedValue = ''
 let sign = ''; let openingBalance = 0; let currentPage; let isEditMode = false; let advItemsPerPage; let totalPayOutsRange = 0; let totalPayInsRange = 0; let checkedRowsId = []
@@ -912,6 +910,8 @@ fetch('/currencies')
                                 //load the loader here
                                 displaySpinner()
                                 localStorage.removeItem('advCurrentPage')
+                                isEditMode = false
+                                localStorage.setItem('editMode', isEditMode)
                                 //display the import button
                                 document.querySelector('.importContainer').style.display = 'block';
                                 //remove the class with the default style
@@ -1177,11 +1177,17 @@ fetch('/currencies')
                             if (pageSize === null) {
                                 pageSize = 5
                             }
+                            else {
+                                pageSize = pageSize
+                            }
                             page = localStorage.getItem('advCurrentPage')// VARIABLE IN THE LOCAL STORAGE, IF THERE IS NON WE TAKE PAGE1
-
+                            alert(page + 'page mmm')
                             //check if the page is empty or if the painfilter is not empty and that we are in the filtering mode
                             if (page === null) {
                                 page = 1
+                            }
+                            else {
+                                page = page
                             }
                             const advancedSearchInput = localStorage.getItem('advSearchInput');
                             //apply a loader 
@@ -3337,7 +3343,7 @@ fetch('/currencies')
                                             invoiceCell.focus()
 
                                         }
-                                        if (descriptionStatus.isDisplayed === true) {
+                                        else if (descriptionStatus.isDisplayed === true) {
                                             //MOVE FOCUS TO DESCRIPTION CELL
                                             cashFlowDescriptionCell.contentEditable = true
                                             cashFlowDescriptionCell.focus()
@@ -3673,6 +3679,13 @@ fetch('/currencies')
                                     range.collapse(false); // Move the cursor to the end of the text
                                     selection.removeAllRanges();
                                     selection.addRange(range);
+                                }
+                                else {
+                                    // make the cell clickable if the data and type are filled
+                                    if (cashFlowDate.innerText !== '' && typeCell.innerText !== '') {
+                                        cashFlowDescriptionCell.contentEditable = true;
+                                        cashFlowDescriptionCell.focus();
+                                    }
                                 }
                             })
                             cashFlowDescriptionCell.addEventListener("keydown", function (event) {
@@ -4478,6 +4491,7 @@ fetch('/currencies')
                         //==================================================================================================
                         //FUNCTION TO CALL WHEN SAVING NEW RECORD
                         async function saveCashFlowRecord(itemsToProcess, sessionId) {
+                            const page = localStorage.getItem('advCurrentPage')// VARIABLE IN THE LOCAL STORAGE, IF THERE IS NON WE TAKE PAGE1
                             //THEN LET THE SERVER STORE IT IN THE DATABASE
                             // displaySpinner()
                             fetch('/saveCashflow', { //THIS IS AN API END POINT TO CARRY THE VARIABLE NAMES TO ANOTHER JS MODULE WHICH WILL BE THE SEVER
@@ -4499,14 +4513,14 @@ fetch('/currencies')
                                             cashFlowArray.push(doc)
 
                                         }
+                                        //get the data recored for that period selected
+                                        let cashFlowsForThatDay = []
                                         const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
                                         const eDate = localStorage.getItem('lastDate');
                                         const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
                                         const endDate = new Date(eDate);
-                                        //get the data recored for that period selected
-                                        let cashFlowsForThatDay = []
-                                        for (let i = 0; i < cashFlowArray.length; i++) {
-                                            const row = cashFlowArray[i];
+                                        for (let i = 0; i < dbDocs.length; i++) {
+                                            const row = dbDocs[i];
                                             const expDate = row.CashFlowDate;
                                             const parts = expDate.split("/");
                                             const formattedDate =
@@ -4517,8 +4531,6 @@ fetch('/currencies')
                                                 cashFlowsForThatDay.push(row)
                                             }
                                         }
-                                        // else if (row.CashFlowType === 'Payout') {
-                                        //  
                                         const itemsFromLS = localStorage.getItem('advItemsPerPage');
                                         if (itemsFromLS === null) {
                                             advItemsPerPage = 5
@@ -4526,29 +4538,32 @@ fetch('/currencies')
                                         else if (itemsFromLS !== null) {
                                             advItemsPerPage = itemsFromLS
                                         }
-                                        //get the current page from the local storage
-                                        const currentPageFromLS = localStorage.getItem('expCurrentPage');
-                                        if (currentPageFromLS === null) {
-                                            currentPage = 1
-                                        }
-                                        else if (currentPageFromLS !== null) {
-                                            currentPage = currentPageFromLS
-                                        }
+                                        const totalPages = Math.ceil(cashFlowsForThatDay.length / advItemsPerPage); // 7
                                         if (cashFlowsForThatDay.length > advItemsPerPage) {
                                             currentPage = Math.ceil(cashFlowsForThatDay.length / advItemsPerPage)
 
                                         } else if (cashFlowsForThatDay.length < advItemsPerPage) {
                                             currentPage = 1
                                         }
-                                        // localStorage.setItem('expCurrentPage', currentPage);
+                                        if (currentPage > totalPages) {
+                                            currentPage = totalPages; // Set to 7 (last page)
+                                        }
+
+                                        localStorage.setItem('advCurrentPage', currentPage)// VARIABLE IN THE LOCAL STORAGE, IF THERE IS NON WE TAKE PAGE1
                                         defaultDisplayContent2(startDate, endDate);
                                     } else {
                                         // Error saving data
                                         console.error('Error saving data');
                                         spinner.style.display = 'none';
+                                        const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                        const eDate = localStorage.getItem('lastDate');
+                                        const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                        const endDate = new Date(eDate);
+                                        defaultDisplayContent2(startDate, endDate);
                                         displayContainerBlocks()
                                         notification("Not updated..error occured");
-                                        defaultDisplayContent2(startDate, endDate);
+
+
                                     }
                                 })
                                 .catch(error => console.error(error));
@@ -5609,7 +5624,7 @@ fetch('/currencies')
                             if (editMode === null) {
                                 //load the loader here
                                 // displaySpinner()
-                                localStorage.removeItem('advCurrentPage')
+                                // localStorage.removeItem('advCurrentPage')
                                 //display the import button
                                 document.querySelector('.importContainer').style.display = 'block';
                                 //now display the colums icon
