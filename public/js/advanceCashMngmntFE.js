@@ -4509,64 +4509,64 @@ fetch('/currencies')
                                 deleteRowsModal.style.display = 'none'
 
                             })
-                            //when the yes button is clicked
-                            yesDeleteRows.addEventListener('click', (event) => {
-                                if (checkedRowsId.length > 0) {
-                                    //  Hide the delete modal
-                                    deleteModal.style.display = 'none';
-                                    deleteRowsModal.style.display = 'none'
-                                    checkedRows = []
-                                    //appliy spinner
-                                    displaySpinner()
-                                    try {
-                                        fetch('/delete', {
-                                            method: 'DELETE',
-                                            headers: {
-                                                'Content-Type': 'application/json'
-                                            },
-                                            body: JSON.stringify({
-                                                checkedRowsId,
-                                                sessionId
-                                            })
+
+                        })
+                        //when the yes button is clicked
+                        yesDeleteRows.addEventListener('click', (event) => {
+                            alert('ahahah')
+                            if (checkedRowsId.length > 0) {
+                                //  Hide the delete modal
+                                deleteModal.style.display = 'none';
+                                deleteRowsModal.style.display = 'none'
+                                checkedRows = []
+                                //appliy spinner
+                                displaySpinner()
+                                try {
+                                    fetch('/delete', {
+                                        method: 'DELETE',
+                                        headers: {
+                                            'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify({
+                                            checkedRowsId,
+                                            sessionId
                                         })
-                                            .then(response => {
-                                                return response.json()
-                                            })
-                                            .then(data => {
-                                                if (data.amDeleted === true) {
-                                                    checkedRowsId = []
-                                                    notification("Deleted");
-                                                    currentPage = 1
-                                                    localStorage.setItem('advCurrentPage', currentPage)
-                                                    if (document.querySelector(".myCheck").checked === true) {
-                                                        document.querySelector(".myCheck").checked = false
-                                                    }
-                                                    // location.href = "/advanceCashMngmnt"
-                                                    const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                                    const eDate = localStorage.getItem('lastDate');
-                                                    const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                                    const endDate = new Date(eDate);
-                                                    defaultDisplayContent2(startDate, endDate)
-
-
+                                    })
+                                        .then(response => {
+                                            return response.json()
+                                        })
+                                        .then(data => {
+                                            if (data.amDeleted === true) {
+                                                checkedRowsId = []
+                                                currentPage = 1
+                                                localStorage.setItem('advCurrentPage', currentPage)
+                                                if (document.querySelector(".myCheck").checked === true) {
+                                                    document.querySelector(".myCheck").checked = false
                                                 }
-                                                else {
-                                                    notification("Not Deleted..error occured");
-                                                    const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                                    const eDate = localStorage.getItem('lastDate');
-                                                    const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                                    const endDate = new Date(eDate);
-                                                    defaultDisplayContent2(startDate, endDate)
+                                                // location.href = "/advanceCashMngmnt"
+                                                const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                                const eDate = localStorage.getItem('lastDate');
+                                                const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                                const endDate = new Date(eDate);
+                                                defaultDisplayContent2(startDate, endDate)
+                                                notification("Deleted");
+                                            }
+                                            else {
+                                                notification("Not Deleted..error occured");
+                                                const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                                const eDate = localStorage.getItem('lastDate');
+                                                const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                                const endDate = new Date(eDate);
+                                                defaultDisplayContent2(startDate, endDate)
 
-                                                }
-                                            })
+                                            }
+                                        })
 
-                                    } catch (err) {
-                                        console.error(err);
-                                    }
+                                } catch (err) {
+                                    console.error(err);
                                 }
+                            }
 
-                            })
                         })
                         //==================================================================================================
                         //FUNCTION TO CALL WHEN SAVING NEW RECORD
