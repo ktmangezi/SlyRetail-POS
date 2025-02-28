@@ -2611,7 +2611,7 @@ fetch('/currencies')
                                             localStorage.setItem('firstDate', startDate);
                                             localStorage.setItem('lastDate', endDate);
                                             // initializeDateRangePicker()
-
+                                            notification("Updating....");
                                             fetch('/updateCashFlowDate', {
                                                 method: 'POST',
                                                 headers: {
@@ -2627,10 +2627,13 @@ fetch('/currencies')
                                                 .then(data => {
                                                     // Show alert
                                                     if (data.amUpdated === true) {
+                                                        const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                                        const eDate = localStorage.getItem('lastDate');
+                                                        const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                                        const endDate = new Date(eDate);
+                                                        defaultDisplayContent2(startDate, endDate);
                                                         notification('Updated')
-                                                        // spinner.style.display = 'none'
-                                                        initializeDateRangePicker()
-                                                        // defaultDisplayContent2(startDate, endDate);
+
 
                                                     }
                                                     else {
@@ -2913,6 +2916,7 @@ fetch('/currencies')
                                         const typeSelected = type.innerText
 
                                         //endesa ku database the result
+                                        notification("Updating....");
                                         fetch('/updateCashFlowType', {
                                             method: 'POST',
                                             headers: {
@@ -2973,6 +2977,7 @@ fetch('/currencies')
                                     newEmptyRow.querySelector('.Taxdropdown-menu').style.display = 'none';
                                 }
                                 else {
+                                    // alert(previousState)
                                     let currentState = null //to store the current stattus upon click
                                     if (previousState) {
                                         currentState = false
@@ -2995,29 +3000,19 @@ fetch('/currencies')
                                         previousState = currentState;
                                     } else {
                                         if (currentState) {
-                                            // Show the dropdown menu
                                             newEmptyRow.querySelector('.Taxdropdown-menu').style.display = 'block';
-                                        }
-                                        //if the user has clicked and the status remains false,he hasnt made any changes to vat ststatus Y/N
-                                        //close the modal
-                                        if (currentState === false && prevStat === false) {
-                                            radioButton.checked = prevStat //remain in the prev status
-                                        }
-                                        if (currentState === false && prevStat === true) {
-                                            newEmptyRow.querySelector('.Taxdropdown-menu').style.display = 'block';
-
                                         }
                                         // Update the previous state to the current state after the click
                                         previousState = currentState;
                                     }
-
                                 }
+
                             });
                             //event listeners on the dropdown menu items
                             let allItems = newEmptyRow.querySelectorAll('.Taxdropdown-menu a')
                             allItems.forEach(item => {
                                 item.addEventListener('click', (event) => {
-                                    event.preventDefault();
+                                    event.preventDefault(); // Stop the event from bubbling up to the td
                                     taxtypeSelected = item.innerText
                                     createSubMenu()
                                 })
@@ -3252,8 +3247,10 @@ fetch('/currencies')
                                     newEmptyRow.querySelector(`.VatDropdown-menu`).style.display = 'none'
                                 });
                                 // Yes Tick (✓) icon functionality
-                                yesTick.addEventListener('click', function () {
+                                yesTick.addEventListener('click', function (event) {
+                                    event.stopPropagation(); // Stop the event from bubbling up to the td
                                     saveTaxData()
+
                                 });
 
                                 function saveTaxData() {
@@ -3267,11 +3264,12 @@ fetch('/currencies')
                                         const editableTextVatNumber = newEmptyRow.querySelector(`#editable-vattext3`).innerText; // VatNumber field
                                         const editableTextTinNumber = newEmptyRow.querySelector(`#editable-vattext4`).innerText; // VatNumber field
                                         editableTextVatAmount = Number(newEmptyRow.querySelector(`#editable-vattext5`).innerText.trim()); // VatAmount field
-
                                         //check if all the data is not equal to defaults values
                                         if (editableTextVatAmount === 0) {
                                             VatStatus = 'N'
                                             taxStatus = "N"
+                                            vatBtn.checked = false
+
                                         }
                                         else {
                                             VatStatus = 'Y'
@@ -3301,8 +3299,13 @@ fetch('/currencies')
                                         };
 
                                         if (rowId !== '') {
+                                            console.log(vatEntry)
                                             taxDataToUpdate.push(vatEntry)
                                             updateTaxStatus(taxStatus, taxDataToUpdate, rowId)
+                                            if (newEmptyRow.querySelector('.Taxdropdown-menu').style.display === 'block') {
+                                                newEmptyRow.querySelector('.Taxdropdown-menu').style.display = 'none';
+                                            }
+
                                         }
                                     }
                                     else if (taxtypeSelected === 'ztf') {
@@ -3317,6 +3320,8 @@ fetch('/currencies')
                                         if (editableTextLevyAmount === 0) {
                                             ztfStat = 'N'
                                             taxStatus = "N"
+                                            vatBtn.checked = false
+
                                         }
                                         else {
                                             ztfStat = 'Y'
@@ -3347,11 +3352,15 @@ fetch('/currencies')
                                         if (rowId !== '') {
                                             taxDataToUpdate.push(ztfEntry)
                                             updateTaxStatus(taxStatus, taxDataToUpdate, rowId)
+                                            newEmptyRow.querySelector('.Taxdropdown-menu').style.display = 'none';
+                                            vatBtn.checked = true
+
                                         }
                                     }
                                     if (rowId === '') {
                                         //remove the dropdowns and open next cell
                                         newEmptyRow.querySelector(`.VatDropdown-menu`).style.display = 'none'
+                                        newEmptyRow.querySelector('.Taxdropdown-menu').style.display = 'none';
                                         previousState = false//set radio button status to true as the dropdown menu is still open
                                         //open the next cell
                                         if (invoiceStatus.isDisplayed === true) {
@@ -3385,16 +3394,15 @@ fetch('/currencies')
                                 // Check if the click is inside the editable area or dropdown
                                 const clickedInsideDropdown = dropdown.contains(event.target);
                                 if (!clickedInsideDropdown) {
-                                    // console.log('am contributing')
                                     // If clicked outside both editable area and dropdown, close the dropdown and uncheck the radio button
                                     dropdown.style.display = 'none'; // Close dropdown
                                     subMenu.style.display = 'none'
-                                    // previousState = false//set radio button status to false as the dropdown menu has been closed
 
                                 }
                             });
                             //=====================================================================================
                             function updateTaxStatus(taxStatus, taxDataToUpdate, rowId) {
+                                notification("Updating....");
                                 // send the data to db
                                 fetch("/updateCashFlowTax", {
                                     method: "POST",
@@ -3412,10 +3420,13 @@ fetch('/currencies')
                                     .then((data) => {
                                         // Show alert
                                         if (data.amUpdated === true) {
-                                            notification("Updated");
                                             // vatBtn.checked = true
-                                            spinner.style.display = "none";
+                                            const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                            const eDate = localStorage.getItem('lastDate');
+                                            const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                            const endDate = new Date(eDate);
                                             defaultDisplayContent2(startDate, endDate)
+                                            notification("Updated");
                                         }
                                         else {
                                             let message = ''
@@ -3428,6 +3439,10 @@ fetch('/currencies')
                                             }
 
                                             notification(message);
+                                            const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                            const eDate = localStorage.getItem('lastDate');
+                                            const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                            const endDate = new Date(eDate);
                                             defaultDisplayContent2(startDate, endDate);
 
                                         }
@@ -3473,7 +3488,8 @@ fetch('/currencies')
                                         }
                                     }
                                     else if (rowId !== '') {
-                                        spinner.style.display = 'block'
+                                        notification("Updating....");
+
                                         //  use the fetch for the route with POST method and update the expense rate in the database
                                         fetch('/updateCashFlowInvoice', {
                                             method: 'POST',
@@ -3505,6 +3521,10 @@ fetch('/currencies')
                                                     }
 
                                                     notification(message);
+                                                    const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                                    const eDate = localStorage.getItem('lastDate');
+                                                    const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                                    const endDate = new Date(eDate);
                                                     defaultDisplayContent2(startDate, endDate);
 
                                                 }
@@ -3762,6 +3782,8 @@ fetch('/currencies')
                                         const description = cashFlowDescriptionCell.innerText
                                         cashFlowDescriptionCell.blur()//remove focus
                                         //then update database
+                                        notification("Updating....");
+
                                         fetch('/updateCashFlowDescription', {
                                             method: 'POST',
                                             headers: {
@@ -3791,6 +3813,10 @@ fetch('/currencies')
                                                     }
 
                                                     notification(message);
+                                                    const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                                    const eDate = localStorage.getItem('lastDate');
+                                                    const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                                    const endDate = new Date(eDate);
                                                     defaultDisplayContent2(startDate, endDate);
 
                                                 }
@@ -3889,7 +3915,7 @@ fetch('/currencies')
                             })
                             //function to update category cell in database
                             function saveCategoryTodatabase(newCategory) {
-                                spinner.style.display = "block";
+                                notification("Updating....");
                                 fetch("/updateCashFlowCategory", {
                                     method: "POST",
                                     headers: {
@@ -3920,6 +3946,10 @@ fetch('/currencies')
                                             }
 
                                             notification(message);
+                                            const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                            const eDate = localStorage.getItem('lastDate');
+                                            const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                            const endDate = new Date(eDate);
                                             defaultDisplayContent2(startDate, endDate);
 
                                         }
@@ -4033,6 +4063,7 @@ fetch('/currencies')
                                 });
                             });
                             function currencyToDatabase(rowId, newCurrency, cashEquivValue2, newCashFlowRate) {
+                                notification("Updating....");
                                 fetch('/updateCashFlowCurrency', {
                                     method: 'POST',
                                     headers: {
@@ -4066,6 +4097,10 @@ fetch('/currencies')
                                             }
 
                                             notification(message);
+                                            const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                            const eDate = localStorage.getItem('lastDate');
+                                            const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                            const endDate = new Date(eDate);
                                             defaultDisplayContent2(startDate, endDate);
 
                                         }
@@ -4150,6 +4185,7 @@ fetch('/currencies')
                                                 spinner.style.display = 'block';
                                                 expenseAmount.blur();//REMOVE FOCUS ON CELL
                                                 //NOW LOAD THE DATA IN THE CELLS INTO VARIABLES SO THAT THEY CAN BE SEND TO THE DATABASE FOR SAVING
+                                                notification("Updating....");
                                                 fetch('/updateCashFlowAmount', {
                                                     method: 'POST',
                                                     headers: {
@@ -4181,6 +4217,10 @@ fetch('/currencies')
                                                             }
 
                                                             notification(message);
+                                                            const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                                            const eDate = localStorage.getItem('lastDate');
+                                                            const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                                            const endDate = new Date(eDate);
                                                             defaultDisplayContent2(startDate, endDate);
 
                                                         }
@@ -4286,7 +4326,14 @@ fetch('/currencies')
 
                                             const currentDate = newEmptyRow.querySelector('.expenseDate').innerText;
                                             const selectedType = newEmptyRow.querySelector('.type').innerText;
-                                            const CashFlowDescription = newEmptyRow.querySelector('.editable-cell').innerText;
+                                            let CashFlowDescription = ''
+                                            if (newEmptyRow.querySelector('.editable-cell').innerText === '') {
+                                                CashFlowDescription = 'Unknown ' + selectedType;
+                                            }
+                                            else {
+                                                CashFlowDescription = newEmptyRow.querySelector('.editable-cell').innerText;
+                                            }
+
                                             const Currency_Name = newEmptyRow.querySelector('.currbtnSpan').innerText;
                                             const CashFlowAmount = parseFloat(newEmptyRow.querySelector('.amount-cell').innerText);
                                             const CashFlowRate = parseFloat(newEmptyRow.querySelector('.expRate').innerText);
@@ -4415,6 +4462,7 @@ fetch('/currencies')
 
                                             //  use the fetch for the route with POST method and update the expense rate in the database
                                             cashFlowRate.blur();
+                                            notification("Updating....");
                                             fetch('/updateCashFlowRate', {
                                                 method: 'POST',
                                                 headers: {
@@ -4450,6 +4498,7 @@ fetch('/currencies')
                                                         const eDate = localStorage.getItem('lastDate');
                                                         const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
                                                         const endDate = new Date(eDate);
+
                                                         defaultDisplayContent2(startDate, endDate);
 
                                                     }
@@ -6700,22 +6749,6 @@ fetch('/currencies')
                                 errorMsgs.push(error)
 
                             }
-                            //upload as per shift
-                            // Get the first shift number (in the first row) for comparison
-                            const firstShift = csvContent[1].split(/[,;]/)[3]; //  Shift number is in the 4th column (index 3)
-                            // Check for different shifts in the CSV
-                            for (let i = 1; i < csvContent.length - 1; i++) { // Start from 1 to skip the header row
-                                // const row = csvContent[i].split(','); // Split each row by commas
-                                const row = csvContent[i].split(/[,;]/);
-                                const shift = row[3]; //  Shift number is in the 4th column (index 3)
-                                // If a different shift number is found, alert an error and stop processing
-                                if (shift !== firstShift) {
-                                    const error = 'CSV file contains different shift numbers. Please upload a file with the same shift number.'
-                                    errorMsgs.push(error)
-                                    break;
-                                }
-
-                            }
                             //display the errors if they exist
                             if (errorMsgs.length > 0) {
                                 successModal.style.display = 'block'
@@ -6773,8 +6806,29 @@ fetch('/currencies')
                                     const eDate = localStorage.getItem('lastDate');
                                     const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
                                     const endDate = new Date(eDate);
-                                    defaultDisplayContent2(startDate, endDate)
+
+
+                                    //update the categories arrays
+                                    let dbDocs = data.categoriesDocs;
+                                    for (let i = 0; i < dbDocs.length; i++) {
+                                        const doc = dbDocs[i];
+                                        if (doc.Balance === 'PayOut') {
+                                            const categoryName = Array.from(newIncomeCategories).find(cat => cat.category === doc.category)
+                                            if (!categoryName) {
+                                                newExpenseCategories.push(doc)
+                                            }
+                                        }
+                                        if (doc.Balance === 'PayIn') {
+                                            const categoryName = Array.from(newIncomeCategories).find(cat => cat.category === doc.category)
+                                            if (!categoryName) {
+                                                newIncomeCategories.push(doc)
+                                            }
+                                        }
+
+                                    }
+                                    // updateFilterByCategory(startDate, endDate)
                                     // display the modal with the total inserted count
+                                    defaultDisplayContent2(startDate, endDate)
                                     successModal.style.display = 'block'
                                     successModalText.innerText = data.documents.length
                                     document.querySelector('.importText').innerText = 'Import Completed'
@@ -6783,31 +6837,8 @@ fetch('/currencies')
                                     document.querySelector('.noUploadData').style.display = 'none'
                                     document.querySelector('.checkmark-circle').style.display = 'inline-block'
                                     document.querySelector('.uploadError').style.display = 'none'
-                                    displaySpinner()
-                                    //update the categories arrays
-                                    let dbDocs = data.categoriesDocs;
-                                    for (let i = 0; i < dbDocs.length; i++) {
-                                        const doc = dbDocs[i];
-                                        if (doc.Balance === 'PayOut') {
-                                            //cjheck if suspense already exisit
-                                            if (doc.category.replace(/ /g, "_").toLowerCase() !== 'suspense') {
-                                                newExpenseCategories.push(doc); // Push only if category is not 'suspense'
-                                            } else {
-                                                console.log('Document not added: category is "suspense".');
-                                            }
-                                        }
-                                        if (doc.Balance === 'PayIn') {
-                                            //cjheck if suspense already exisit
-                                            if (doc.category.replace(/ /g, "_").toLowerCase() !== 'suspense') {
-                                                newIncomeCategories.push(doc); // Push only if category is not 'suspense'
-                                            } else {
-                                                console.log('Document not added: category is "suspense".');
-                                            }
-                                        }
-
-                                    }
-                                    // updateFilterByCategory(startDate, endDate)
                                     console.log("Data successfully processed and saved.");
+                                    removeSpinner()
                                 } else {
                                     let message = ''
                                     if (data.isSaving === false) {
