@@ -1188,7 +1188,6 @@ fetch('/currencies')
                             else {
                                 page = page
                             }
-                            console.log(page)
                             const advancedSearchInput = localStorage.getItem('advSearchInput');
                             //apply a loader 
                             fetch('/defaultDisplayThePaginationWay', {
@@ -3088,24 +3087,23 @@ fetch('/currencies')
                                             editableText.innerText = ""; // Placeholder text if empty or zero
                                         }
                                     }
-                                    // else {
-                                    //     // check if there has ben any taxt type selection,if any has been selected fill the tds with its data if they had been filled before
-                                    //     if (Object.keys(vatEntry).length !== 0 && taxtypeSelected === 'vat') {
-                                    //         const keys = Object.keys(vatEntry)
-                                    //         const field = keys[i]
-                                    //         editableText.innerText = vatEntry[field];
-                                    //     }
+                                    else {
+                                        // check if there has ben any taxt type selection,if any has been selected fill the tds with its data if they had been filled before
+                                        if (Object.keys(vatEntry).length !== 0 && taxtypeSelected === 'vat') {
+                                            const keys = Object.keys(vatEntry)
+                                            const field = keys[i]
+                                            editableText.innerText = vatEntry[field];
+                                        }
 
-                                    //     else if (Object.keys(ztfEntry).length !== 0 && taxtypeSelected === 'ztf') {
-                                    //         const keys = Object.keys(ztfEntry)
-                                    //         const field = keys[i]
-                                    //         editableText.innerText = ztfEntry[field];
-                                    //     }
-                                    //     else {
-                                    //         editableText.textContent = "";  // Initially empty, can be populated on click
-
-                                    //     }
-                                    // }
+                                        else if (Object.keys(ztfEntry).length !== 0 && taxtypeSelected === 'ztf') {
+                                            const keys = Object.keys(ztfEntry)
+                                            const field = keys[i]
+                                            editableText.innerText = ztfEntry[field];
+                                        }
+                                        else {
+                                            editableText.textContent = "";  // Initially empty, can be populated on click
+                                        }
+                                    }
 
                                     // Add the label and editable text to the cell
                                     newCell.appendChild(label);
@@ -3130,25 +3128,41 @@ fetch('/currencies')
                                     // Loop through each editable text div and attach event listeners
                                     //apply newcwll event listeners
                                     editableText.addEventListener('keydown', function (event) {
+                                        const editableVatText = newEmptyRow.querySelector(`#editable-vattext5`);
+                                        if (event.key === 'Delete' || event.key === 'Backspace') {
+                                            console.log("Value after Delete/Backspace:", editableVatText.innerText.trim());
+
+                                            // Add your custom logic here
+                                            if (editableVatText.innerText.trim() === '') {
+                                                console.log("The field is now empty.");
+                                            } else {
+                                                console.log("The field has a value:", editableVatText.innerText.trim());
+                                            }
+                                        }
+
+
                                         // If Enter key is pressed, prevent default action and move focus to the next editable text field
                                         if (event.key === "Enter") {
                                             event.preventDefault();
                                             // newEmptyRow.querySelector(`.vatTd`).classList.remove('clicked')
                                             if (taxtypeSelected === 'vat') {
                                                 //IF FOCUS IS ON VAT AMOUNT AND IS FILLED WITH SOMETHIN WHEN ENTER IS PRESSED LET IT ACT AS YES TICK
-                                                if (document.activeElement.id === 'editable-vattext5') {
-                                                    // alert(newEmptyRow.querySelector(`#editable-vattext5`).innerText.trim())
-                                                    let editableTextVatAmount = 0
-                                                    editableTextVatAmount = Number(newEmptyRow.querySelector(`#editable-vattext5`).innerText.trim()); // VatAmount field
-                                                    if (editableTextVatAmount !== 0) {
+                                                // Get the currently focused element in the document
+                                                const focusedElement = document.activeElement;
+
+                                                // Check if the focused element is inside newEmptyRow
+                                                if (newEmptyRow.contains(focusedElement) && focusedElement.id === 'editable-vattext5') {
+                                                    const editableTextVatAmount = focusedElement.innerText.trim(); // VatAmount field
+                                                    if (editableTextVatAmount === '') {
+                                                        notification('vat amount cant be empty')
+                                                    }
+                                                    else {
                                                         saveTaxData()
                                                         newEmptyRow.querySelector(`.VatDropdown-menu`).style.display = 'none'; // Close the dropdown menu
                                                         newEmptyRow.querySelector('.Taxdropdown-menu').style.display = 'none';
                                                         vatBtn.checked = true
                                                     }
-                                                    else {
-                                                        notification('vat amount cant be empty')
-                                                    }
+
                                                 }
                                                 else {
                                                     // For other cells, move focus to the next editable cell
@@ -3246,9 +3260,14 @@ fetch('/currencies')
                                 cancelIcon.addEventListener('click', function () {
                                     newEmptyRow.querySelector(`.VatDropdown-menu`).style.display = 'none'
                                 });
+
+
                                 // Yes Tick (✓) icon functionality
                                 yesTick.addEventListener('click', function (event) {
                                     event.stopPropagation(); // Stop the event from bubbling up to the td
+
+                                    console.log("The field has a value2:", newEmptyRow.querySelector(`#editable-vattext5`).innerText.trim());
+
                                     saveTaxData()
 
                                 });
@@ -3264,6 +3283,7 @@ fetch('/currencies')
                                         const editableTextVatNumber = newEmptyRow.querySelector(`#editable-vattext3`).innerText; // VatNumber field
                                         const editableTextTinNumber = newEmptyRow.querySelector(`#editable-vattext4`).innerText; // VatNumber field
                                         editableTextVatAmount = Number(newEmptyRow.querySelector(`#editable-vattext5`).innerText.trim()); // VatAmount field
+
                                         //check if all the data is not equal to defaults values
                                         if (editableTextVatAmount === 0) {
                                             VatStatus = 'N'
@@ -3297,9 +3317,9 @@ fetch('/currencies')
                                             ZtfStatus: 'N', // Add additional status or logic if needed
                                             taxName: 'ztf', // Add additional status or logic if needed
                                         };
+                                        console.log(vatEntry)
 
                                         if (rowId !== '') {
-                                            console.log(vatEntry)
                                             taxDataToUpdate.push(vatEntry)
                                             updateTaxStatus(taxStatus, taxDataToUpdate, rowId)
                                             if (newEmptyRow.querySelector('.Taxdropdown-menu').style.display === 'block') {
@@ -6486,6 +6506,7 @@ fetch('/currencies')
                                     }
                                 }
                                 else if (isEditMode === false) {
+                                    notification('Processing....')
                                     const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
                                     const eDate = localStorage.getItem('lastDate');
                                     const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
@@ -6515,6 +6536,7 @@ fetch('/currencies')
                                     }
                                 }
                                 else if (isEditMode === false) {
+                                    notification('Processing....')
                                     const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
                                     const eDate = localStorage.getItem('lastDate');
                                     const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
@@ -6538,6 +6560,7 @@ fetch('/currencies')
                                     }
                                 }
                                 else if (isEditMode === false) {
+                                    notification('Processing....')
                                     const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
                                     const eDate = localStorage.getItem('lastDate');
                                     const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
@@ -6565,6 +6588,7 @@ fetch('/currencies')
                                     }
                                 }
                                 else if (isEditMode === false) {
+                                    notification('Processing....')
                                     const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
                                     const eDate = localStorage.getItem('lastDate');
                                     const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
@@ -6588,6 +6612,7 @@ fetch('/currencies')
                                     }
                                 }
                                 else if (isEditMode === false) {
+                                    notification('Processing....')
                                     const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
                                     const eDate = localStorage.getItem('lastDate');
                                     const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
