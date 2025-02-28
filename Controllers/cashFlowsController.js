@@ -858,7 +858,6 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
                     CashFlowRate: rowData.CashFlowRate,
                     CashFlowCashEquiv: rowData.CashFlowCashEquiv,
                     CashFlowDate: rowData.CashFlowDate,
-                    // Add other fields from rowData if needed
                 });
 
                 if (exists) {
@@ -911,18 +910,40 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
                     vat: { QRCode: "", DeviceId: 0, ZimraFsNo: '', VatNumber: 0, TinNumber: 0, VatAmount: 0, VatStatus: "N" }, ztf: { First: '', Second: '', LevyAmount: 0, ZtfStatus: "N" }
                 }
             }
+
             // Check if the shift exists
             if (checkTemplateStatus === 'loyverseHeaders') {
-                const existingShift = await myCashflowModel.findOne({ CashFlowShift: shift, CashFlowType: type });
-                if (!existingShift) {
-                    if (type === 'Pay in') {
-                        payInRowDataArray.push(rowData);
+                //check if the data already exist
+                const matchingDoc = await findMatchingDocument(rowData);
+                if (!matchingDoc) {
+                    // Group items by shift and type
+                    const groupedByShift = {};
+                    // Initialize the group if it doesn't exist
+                    if (!groupedByShift[shift]) {
+                        groupedByShift[shift] = {
+                            payIn: [],
+                            payOut: []
+                        };
                     }
-                    else if (type === 'Payout') {
-                        payOutRowDataArray.push(rowData);
+                    const existingShift = await myCashflowModel.findOne({ CashFlowShift: shift, CashFlowType: type });
+                    if (!existingShift) {
+
+                        // Add the rowData to the appropriate group based on type
+                        if (type === 'Pay in') {
+                            groupedByShift[shift].payIn.push(rowData);
+                        } else if (type === 'Payout') {
+                            groupedByShift[shift].payOut.push(rowData);
+                        }
+
                     }
 
+                    // Flatten the grouped data into payInRowDataArray and payOutRowDataArray
+                    for (const shift in groupedByShift) {
+                        payInRowDataArray.push(...groupedByShift[shift].payIn);
+                        payOutRowDataArray.push(...groupedByShift[shift].payOut);
+                    }
                 }
+
             }
             else {
                 //TO STOP DUPLICATION OF DOCUMENTS IF THE SHIFT IS MISING,CHECK IF THE DOCUMENTS EXIST ALREADY BY CHECKING THE WHOLE DATE IF THERE IS ANY MATCH\
@@ -956,13 +977,11 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
                 return categoryFromDb.includes(categoryEnteredByUser);
             });
             if (!match) {
-
                 let payInCat = {}; //THE NEW DOCUMEN
                 payInCat["category"] = category;
                 payInCat["CategoryLimit"] = 0;
                 payInCat["CategoryLimitRange"] = "";
                 payInCat["Balance"] = myType;
-                console.log(payInCat)
                 // If the category doesn't exist, insert the new record
                 await saveCategoryToDb(payInCat)
             }
@@ -971,6 +990,12 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
         for (let i = 0; i < itemsToProcess.length; i++) {
             const data = itemsToProcess[i];
             if (checkTemplateStatus === 'loyverseHeaders') {
+                if (data.Comment === '') {
+                    data.Comment = `Unknown ${data.Type}`
+                }
+                else {
+                    data.Comment = data.Comment
+                }
                 date = data.Date; shift = "Shift" + data.Shiftnumber + " " + data.POS;
                 type = data.Type; invoiceNo = ''; currency = ''; category = 'suspense';
                 description = data.Comment;
