@@ -391,8 +391,13 @@ export async function updateCashFlowTax(req, rowId, taxDataToUpdate, sessionId) 
                         await myCashflowModel.updateOne({ _id: ObjectId(rowId) },  // Find the document by its _id
                             {
                                 $set: {
-                                    "Tax.vat.VatStatus": tax.VatStatus,  // Update only the VatStatus field inside the Vat object
+                                    "Tax.vat.QRCode": tax.QRCode,  // Update only the taxStatusus field inside the Vat object
+                                    "Tax.vat.DeviceId": tax.DeviceId, // Update only the taxStatus field inside the Vat object
+                                    "Tax.vat.ZimraFsNo": tax.ZimraFsNo, // Update only the taxStatus field inside the Vat object
+                                    "Tax.vat.VatNumber": tax.VatNumber, // Update only the taxStatus field inside the Vat object
+                                    "Tax.vat.TinNumber": tax.TinNumber, // Update only the taxStatus field inside the Vat object
                                     "Tax.vat.VatAmount": tax.VatAmount, // Update only the taxStatus field inside the Vat object
+                                    "Tax.vat.VatStatus": tax.VatStatus  // Update only the VatStatus field inside the Vat object
                                 }
                             }
                         ).then(result => {
@@ -443,9 +448,10 @@ export async function updateCashFlowTax(req, rowId, taxDataToUpdate, sessionId) 
                         await myCashflowModel.updateOne({ _id: ObjectId(rowId) },  // Find the document by its _id
                             {
                                 $set: {
-                                    "Tax.ztf.ZtfStatus": tax.ZtfStatus,  // Update only the VatStatus field inside the Vat object
+                                    "Tax.ztf.First": tax.First,  // Update only the taxStatusus field inside the Vat object
+                                    "Tax.ztf.Second": tax.Second, // Update only the taxStatusus field inside the Vat object
                                     "Tax.ztf.LevyAmount": tax.LevyAmount, // Update only the taxStatusus field inside the Vat object
-
+                                    "Tax.ztf.ZtfStatus": tax.ZtfStatus  // Update only the VatStatus field inside the Vat object
                                 }
                             }
                         ).then(result => {
@@ -741,7 +747,6 @@ export async function deleteCashFLow(req, checkedRowsId, sessionId) {
             });
             console.log('i am the  delete cashflow row  procedure  ');
             let deleteIds = [];
-
             for (let i = 0; i < checkedRowsId.length; i++) {
                 const cashFlowId = checkedRowsId[i];//get the array of ids to delete
                 deleteIds.push(ObjectId(cashFlowId));//make each id an object of mongo db id
@@ -756,8 +761,9 @@ export async function deleteCashFLow(req, checkedRowsId, sessionId) {
                         amDeleted = false;
                     }
                 })
+            const allDocuments = await myCashflowModel.find();
 
-            return { amDeleted };
+            return { amDeleted, allDocuments };
         }
     } catch (error) {
         console.error(error);
@@ -946,8 +952,6 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
             const match = allCategories.some(doc => {
                 const categoryFromDb = doc.category.toLowerCase();  // Assuming 'category' is a field in your model
                 const categoryEnteredByUser = category.toLowerCase();  // Normalize user input
-                console.log(categoryFromDb)
-                console.log(categoryEnteredByUser)
                 // Check if any letter from the user input exists in the category from the database
                 return categoryFromDb.includes(categoryEnteredByUser);
             });
@@ -1115,6 +1119,7 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
                 return { isSaved: false };
             }
         }
+        console.log(insertedCategories)
         return { isSaving, insertedDocuments, insertedCategories }
     } catch (error) {
         console.error('Error inserting documents:', error);
