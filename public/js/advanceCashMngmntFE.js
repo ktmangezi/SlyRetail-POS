@@ -1206,7 +1206,7 @@ fetch('/currencies')
                             })
                                 .then(response => response.json())
                                 .then(data => {
-                                    removeSpinner()
+
                                     // From the server, the computation of the total income and expenses (as well as by filter) per range has been done
                                     //TOP GRANT TOTALS COMPUTATION
                                     itemsToProcess = []
@@ -1285,6 +1285,7 @@ fetch('/currencies')
                         }
 
                         function currentCashFlowTable(totalPages, page, pageSize, itemsToProcess) {
+                            removeSpinner()
                             defaultdisplayContainerBlocks()
                             const allTableRow = document.querySelectorAll('.shiftRowss')
                             for (let a = 0; a < allTableRow.length; a++) {
@@ -4639,86 +4640,86 @@ fetch('/currencies')
                         //==================================================================================================
                         //FUNCTION TO CALL WHEN SAVING NEW RECORD
                         async function saveCashFlowRecord(itemsToProcess, sessionId) {
-                            const page = localStorage.getItem('advCurrentPage')// VARIABLE IN THE LOCAL STORAGE, IF THERE IS NON WE TAKE PAGE1
                             //THEN LET THE SERVER STORE IT IN THE DATABASE
                             // displaySpinner()
                             notification("Saving Data.....");
+                            try {
+                                const response = await fetch('/saveCashflow', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        itemsToProcess,
+                                        sessionId
+                                    })
+                                });
 
-                            fetch('/saveCashflow', { //THIS IS AN API END POINT TO CARRY THE VARIABLE NAMES TO ANOTHER JS MODULE WHICH WILL BE THE SEVER
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    itemsToProcess,
-                                    sessionId
-                                }) // THE VARIABLES ARE STORED AS JOSON OBJECT, TRANSFEREABLE TO SERVER MODULE WHEN THE SERVER TAPS INTOR BODY-PARSER
-                            })
-                                .then(response => response.json())
-                                .then(data => {
-                                    if (data.isSaving === true) {
-                                        let dbDocs = data.documents //array from db
-                                        for (let i = 0; i < dbDocs.length; i++) {
-                                            const doc = dbDocs[i];
-                                            cashFlowArray.push(doc)
-
-                                        }
-                                        //get the data recored for that period selected
-                                        let cashFlowsForThatDay = []
-                                        const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                        const eDate = localStorage.getItem('lastDate');
-                                        const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                        const endDate = new Date(eDate);
-                                        for (let i = 0; i < dbDocs.length; i++) {
-                                            const row = dbDocs[i];
-                                            const expDate = row.CashFlowDate;
-                                            const parts = expDate.split("/");
-                                            const formattedDate =
-                                                parts[1] + "/" + parts[0] + "/" + parts[2];
-                                            const formattedDates2 = new Date(formattedDate);
-                                            if (startDate.getTime() <= formattedDates2.getTime() && formattedDates2.getTime() <= endDate.getTime()) {
-                                                //STORE IN AN ARRAY 
-                                                cashFlowsForThatDay.push(row)
-                                            }
-                                        }
-                                        const itemsFromLS = localStorage.getItem('advItemsPerPage');
-                                        if (itemsFromLS === null) {
-                                            advItemsPerPage = 5
-                                        }
-                                        else if (itemsFromLS !== null) {
-                                            advItemsPerPage = itemsFromLS
-                                        }
-                                        const totalPages = Math.ceil(cashFlowsForThatDay.length / advItemsPerPage); // 7
-                                        if (cashFlowsForThatDay.length > advItemsPerPage) {
-                                            currentPage = Math.ceil(cashFlowsForThatDay.length / advItemsPerPage)
-
-                                        } else if (cashFlowsForThatDay.length < advItemsPerPage) {
-                                            currentPage = 1
-                                        }
-                                        if (currentPage > totalPages) {
-                                            currentPage = totalPages; // Set to 7 (last page)
-                                        }
-
-                                        localStorage.setItem('advCurrentPage', currentPage)// VARIABLE IN THE LOCAL STORAGE, IF THERE IS NON WE TAKE PAGE1
-                                        notification("Saved");
-
-                                        defaultDisplayContent2(startDate, endDate);
-                                    } else {
-                                        // Error saving data
-
-                                        spinner.style.display = 'none';
-                                        const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                        const eDate = localStorage.getItem('lastDate');
-                                        const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                        const endDate = new Date(eDate);
-                                        defaultDisplayContent2(startDate, endDate);
-                                        displayContainerBlocks()
-                                        notification("Not Saved..error occured");
-
+                                const data = await response.json();
+                                if (data.isSaving === true) {
+                                    let dbDocs = data.documents //array from db
+                                    for (let i = 0; i < dbDocs.length; i++) {
+                                        const doc = dbDocs[i];
+                                        cashFlowArray.push(doc)
 
                                     }
-                                })
-                                .catch(error => console.error(error));
+                                    //get the data recored for that period selected
+                                    let cashFlowsForThatDay = []
+                                    const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                    const eDate = localStorage.getItem('lastDate');
+                                    const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                    const endDate = new Date(eDate);
+                                    for (let i = 0; i < dbDocs.length; i++) {
+                                        const row = dbDocs[i];
+                                        const expDate = row.CashFlowDate;
+                                        const parts = expDate.split("/");
+                                        const formattedDate =
+                                            parts[1] + "/" + parts[0] + "/" + parts[2];
+                                        const formattedDates2 = new Date(formattedDate);
+                                        if (startDate.getTime() <= formattedDates2.getTime() && formattedDates2.getTime() <= endDate.getTime()) {
+                                            //STORE IN AN ARRAY 
+                                            cashFlowsForThatDay.push(row)
+                                        }
+                                    }
+                                    const itemsFromLS = localStorage.getItem('advItemsPerPage');
+                                    if (itemsFromLS === null) {
+                                        advItemsPerPage = 5
+                                    }
+                                    else if (itemsFromLS !== null) {
+                                        advItemsPerPage = itemsFromLS
+                                    }
+
+                                    const totalPages = Math.ceil(cashFlowsForThatDay.length / advItemsPerPage); // 7
+                                    if (cashFlowsForThatDay.length > advItemsPerPage) {
+                                        currentPage = Math.ceil(cashFlowsForThatDay.length / advItemsPerPage)
+
+                                    } else if (cashFlowsForThatDay.length < advItemsPerPage) {
+                                        currentPage = 1
+                                    }
+                                    if (currentPage > totalPages) {
+                                        currentPage = totalPages; // Set to 7 (last page)
+                                    }
+                                    localStorage.setItem('advCurrentPage', currentPage)// VARIABLE IN THE LOCAL STORAGE, IF THERE IS NON WE TAKE PAGE1
+                                    notification("Saved");
+
+                                    await defaultDisplayContent2(startDate, endDate);
+                                } else {
+                                    // Error saving data
+
+                                    spinner.style.display = 'none';
+                                    const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                    const eDate = localStorage.getItem('lastDate');
+                                    const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                    const endDate = new Date(eDate);
+                                    await defaultDisplayContent2(startDate, endDate);
+                                    displayContainerBlocks()
+                                    notification("Not Saved..error occured");
+
+                                }
+                            } catch (error) {
+                                console.error('Error saving data:', error);
+                                notification("Error saving data. Please try again.");
+                            }
                         }
                         //============================================================================================
                         function insertCategoryRecord(categoryToDb, sessionId) {
