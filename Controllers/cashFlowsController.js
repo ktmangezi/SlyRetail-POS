@@ -69,18 +69,38 @@ export async function getCashFlowArray(req, startDate, endDate, pageSize, page, 
                 row.CashFlowCashEquiv = Number(parseFloat(row.CashFlowAmount) / parseFloat(relativeRate)).toFixed(2);
                 //calculate the opening balance
                 //GET THE VALUE OF THE PREVIOUS MONTH BASED ON THE RANGE SELECTED
-                const momntStartDate = moment(startDate)
-                let theBeforeStartDate = momntStartDate.subtract(1, "days")
+                // const momntStartDate = moment(startDate)
+                // let theBeforeStartDate = momntStartDate.subtract(1, "days")
 
-                theBeforeStartDate = new Date(theBeforeStartDate)
+                // theBeforeStartDate = new Date(theBeforeStartDate)
+                // if (row.CashFlowType === "Payout") {
+                //     if (theBeforeStartDate.getTime() >= formattedDates2.getTime()) {
+                //         theBeforeExpenses += parseFloat(row.CashFlowCashEquiv);
+                //     }
+                // }
+                // else if (row.CashFlowType === "Pay in") {
+                //     if (theBeforeStartDate.getTime() >= formattedDates2.getTime()) {
+                //         theBeforeIncome += parseFloat(row.CashFlowCashEquiv);
+                //     }
+                // }
+                      const momntStartDate1 = moment.tz(startDate, "Africa/Harare").startOf('day'); // Midnight in Zimbabwe
+
+                // Subtract 1 day correctly
+                let theBeforeStartDate1 = momntStartDate1.clone().subtract(1, "days");
+
+                // Convert to JavaScript Date without shifting to UTC
+                theBeforeStartDate1 = moment.tz(theBeforeStartDate1.format("YYYY-MM-DD HH:mm:ss"), "Africa/Harare").toDate();
+
+                // Ensure formattedDates2 is also in Zimbabwe timezone
+                const formattedDates2Zim = moment.tz(formattedDates2, "Africa/Harare").startOf('day').toDate();
+
                 if (row.CashFlowType === "Payout") {
-                    if (theBeforeStartDate.getTime() >= formattedDates2.getTime()) {
-                        theBeforeExpenses += parseFloat(row.CashFlowCashEquiv);
+                    if (theBeforeStartDate1.getTime() >= formattedDates2Zim.getTime()) {
+                        theBeforeExpenses += parseFloat(parseFloat(row.CashFlowCashEquiv).toFixed(2));
                     }
-                }
-                else if (row.CashFlowType === "Pay in") {
-                    if (theBeforeStartDate.getTime() >= formattedDates2.getTime()) {
-                        theBeforeIncome += parseFloat(row.CashFlowCashEquiv);
+                } else if (row.CashFlowType === "Pay in") {
+                    if (theBeforeStartDate1.getTime() >= formattedDates2Zim.getTime()) {
+                        theBeforeIncome += parseFloat(parseFloat(row.CashFlowCashEquiv).toFixed(2));
                     }
                 }
                 // console.log("Ihave started my computation from" + theBeforeStartDate.getTime())
