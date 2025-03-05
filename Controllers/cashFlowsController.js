@@ -69,21 +69,7 @@ export async function getCashFlowArray(req, startDate, endDate, pageSize, page, 
                 row.CashFlowCashEquiv = Number(parseFloat(row.CashFlowAmount) / parseFloat(relativeRate)).toFixed(2);
                 //calculate the opening balance
                 //GET THE VALUE OF THE PREVIOUS MONTH BASED ON THE RANGE SELECTED
-                // const momntStartDate = moment(startDate)
-                // let theBeforeStartDate = momntStartDate.subtract(1, "days")
-
-                // theBeforeStartDate = new Date(theBeforeStartDate)
-                // if (row.CashFlowType === "Payout") {
-                //     if (theBeforeStartDate.getTime() >= formattedDates2.getTime()) {
-                //         theBeforeExpenses += parseFloat(row.CashFlowCashEquiv);
-                //     }
-                // }
-                // else if (row.CashFlowType === "Pay in") {
-                //     if (theBeforeStartDate.getTime() >= formattedDates2.getTime()) {
-                //         theBeforeIncome += parseFloat(row.CashFlowCashEquiv);
-                //     }
-                // }
-                      const momntStartDate1 = moment.tz(startDate, "Africa/Harare").startOf('day'); // Midnight in Zimbabwe
+                const momntStartDate1 = moment.tz(startDate, "Africa/Harare").startOf('day'); // Midnight in Zimbabwe
 
                 // Subtract 1 day correctly
                 let theBeforeStartDate1 = momntStartDate1.clone().subtract(1, "days");
@@ -103,72 +89,55 @@ export async function getCashFlowArray(req, startDate, endDate, pageSize, page, 
                         theBeforeIncome += parseFloat(parseFloat(row.CashFlowCashEquiv).toFixed(2));
                     }
                 }
-                // console.log("Ihave started my computation from" + theBeforeStartDate.getTime())
+
+
+                // const momntStartDate = moment(startDate)
+
+                // let theBeforeStartDate = momntStartDate.subtract(1, "days")
+
+                // theBeforeStartDate = new Date(theBeforeStartDate)
+                // if (row.CashFlowType === "Payout") {
+                //     if (theBeforeStartDate.getTime() >= formattedDates2.getTime()) {
+                //         theBeforeExpenses += parseFloat(row.CashFlowCashEquiv);
+                //     }
+                // }
+                // else if (row.CashFlowType === "Pay in") {
+                //     if (theBeforeStartDate.getTime() >= formattedDates2.getTime()) {
+                //         theBeforeIncome += parseFloat(row.CashFlowCashEquiv);
+                //     }
+                // }
+                // const openingBalance = parseFloat(theBeforeIncome) - parseFloat(theBeforeExpenses)
+                // console.log("Iam The opening Bal local " + openingBalance)
+                // // console.log("Ihave started my computation from" + theBeforeStartDate.getTime())
 
                 if (startDate.getTime() <= formattedDates2.getTime() && formattedDates2.getTime() <= endDate.getTime()) {
                     if (row.CashFlowType === 'Payout') {
-                        //CODE FOR CALCULATING THE TOTAL PAYOUTs
-                        //if there is a category filter, update the totals per category
-                        if (payOutFilterCategory === "NoPayOutCatFilter") {
-                            totalExpensesPerRange += parseFloat(row.CashFlowCashEquiv);
-                            //THEN CREATE THE ARRAY FOR all the PAYOuts
-                            payOutcashFlowArray.push(cashFlows[a])
-                        }
-                        else if (row.CashFlowCategory === payOutFilterCategory) {
-                            totalExpensesPerRange += parseFloat(row.CashFlowCashEquiv);
-                            //THEN CREATE THE ARRAY FOR all the PAYOuts
-                            payOutcashFlowArray.push(cashFlows[a])
-                        }
-                        //CHECK KANA PANE MATCH IN  EACH DOC PANE DESCRIPTION WITH WHAT HAS BEEN ENTERED BY THE USER TO SEARCH
-                        //CHECK FOR THE TWO SCENARIOS IF BOTH THE CATEGORY FILTER AND SEARCH INPU HAS SOMETHING
+
                         //ALSO IF THE SARCH INPUT HAS SOMETHING BUT THE CATEGORY FILTE DOESNT
-                        const match = (row.CashFlowDescription).toLowerCase().includes(payOutSearchInput)
-                        if (match && (row.CashFlowCategory === payOutFilterCategory)) {
+                        const match = (row.CashFlowDescription).toLowerCase().includes(advancedSearchInput)
+                        if (match) {
                             //collect the totals of the filterd stuff
                             payOutSearchedInputTotal += parseFloat(row.CashFlowCashEquiv);
                             //THEN CREATE THE ARRAY FOR all the searched stuff
                             payOutsearchedInputArray.push(cashFlows[a])
                         }
-                        else if (match && (payOutFilterCategory === "NoPayOutCatFilter")) {
-                            //collect the totals of the filterd stuff
-                            payOutSearchedInputTotal += parseFloat(row.CashFlowCashEquiv);
-                            //THEN CREATE THE ARRAY FOR all the searched stuff
-                            payOutsearchedInputArray.push(cashFlows[a])
-                        }
+
                         //get totals for advanced sheet
                         totalExpensesPerRangeAdv = parseFloat(totalExpensesPerRangeAdv) + parseFloat(row.CashFlowCashEquiv)
 
 
                     }
                     if (row.CashFlowType === 'Pay in') {
-                        //CODE FOR CALCULATING THE TOTAL PAYINs on a condition
-                        //if there is a category filter, update the totals per category
-                        if (payInFilterCategory === "NoPayInCatFilter") {
-                            totalIncomePerRange += parseFloat(row.CashFlowCashEquiv);
-                            //THEN CREATE THE ARRAY FOR all the PAYINs
-                            cashFlowArray.push(cashFlows[a])
-                        }
-                        else if (row.CashFlowCategory === payInFilterCategory) {
-                            totalIncomePerRange += parseFloat(row.CashFlowCashEquiv);
-                            //THEN CREATE THE ARRAY FOR all the PAYINs
-                            cashFlowArray.push(cashFlows[a])
-                        }
-                        //CHECK KANA PANE MATCH IN  EACH DOC PANE DESCRIPTION WITH WHAT HAS BEEN ENTERED BY THE USER TO SEARCH
-                        //CHECK FOR THE TWO SCENARIOS IF BOTH THE CATEGORY FILTER AND SEARCH INPU HAS SOMETHING
+
                         //ALSO IF THE SARCH INPUT HAS SOMETHING BUT THE CATEGORY FILTE DOESNT
-                        const match = (row.CashFlowDescription).toLowerCase().includes(searchInput)
-                        if (match && (row.CashFlowCategory === payInFilterCategory)) {
+                        const match = (row.CashFlowDescription).toLowerCase().includes(advancedSearchInput)
+                        if (match) {
                             //collect the totals of the filterd stuff
                             payInSearchedInputTotal += parseFloat(row.CashFlowCashEquiv);
                             //THEN CREATE THE ARRAY FOR all the searched stuff
                             payInsearchedInputArray.push(cashFlows[a])
                         }
-                        else if (match && (payInFilterCategory === "NoPayInCatFilter")) {
-                            //collect the totals of the filterd stuff
-                            payInSearchedInputTotal += parseFloat(row.CashFlowCashEquiv);
-                            //THEN CREATE THE ARRAY FOR all the searched stuff
-                            payInsearchedInputArray.push(cashFlows[a])
-                        }
+
                         //get totals for advanced sheet
                         totalIncomePerRangeAdv = parseFloat(totalIncomePerRangeAdv) + (row.CashFlowCashEquiv)
                         //get the payOuts
@@ -194,7 +163,7 @@ export async function getCashFlowArray(req, startDate, endDate, pageSize, page, 
             // console.log(index2 +'index2')
             //THE OPENING BALANCE FOR THE SELECTED RANGE
             const openingBalance = parseFloat(theBeforeIncome) - parseFloat(theBeforeExpenses)
-            console.log("Iam The opening Bal " + openingBalance)
+            // console.log("Iam The opening Bal " + openingBalance)
             //THEN CREATE THE ARRAY FOR PAYINS, FOR THE CURRENT RANGE 'this is the one to go to the client side js'
             const startIndex = (parseInt(page) - 1) * parseInt(pageSize);
             const endIndex = startIndex + parseInt(pageSize);
@@ -248,39 +217,119 @@ export async function getCashFlowArray(req, startDate, endDate, pageSize, page, 
 }
 
 
-export async function updateCashFlowDate(req, rowId, newDate, sessionId) {
+export async function updateCashFlowDate(req, rowId, newDate, startDate, endDate, pageSize, page, advancedSearchInput, sessionId) {
     try {
         const db = await connectDB(req, databaseName, signingCriteria, sessionId);
-        if (db) {
-            // Create the model with the specific connection
-            const myCashflowModel = CashflowModel(db);
-            cashFlows = await myCashflowModel.find()
-            // Always Sort the array by 'income date' in ascending order, when the user want to change this it is up to her
-            //and the settings are to be kept under local storage
-            cashFlows.sort((a, b) => {
-                const [dayA, monthA, yearA] = a.CashFlowDate.split('/');
-                const [dayB, monthB, yearB] = b.CashFlowDate.split('/');
-                return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
-            });
-
-
-            console.log('i am the  update date  procedure  ');
-            await myCashflowModel.updateOne({ _id: ObjectId(rowId) }, {
-                $set: {
-                    CashFlowDate: newDate
-                }
-            }).then(result => {
-                console.log(`${result.modifiedCount} document(s) updated.`);
-                modifiedCount = result.modifiedCount
-                if (modifiedCount !== 0) {
-                    amUpdated = true;
-                }
-                else if (modifiedCount === 0) {
-                    amUpdated = false;
-                }
-            })
-            return { amUpdated };
+        if (!db) {
+            throw new Error('Failed to connect to the database');
         }
+        // Create the model with the specific connection
+        const myCashflowModel = CashflowModel(db);
+        const myCurrenciesModel = CurrenciesModel(db);
+
+        // Convert startDate and endDate to Date objects
+        startDate = new Date(startDate);
+        endDate = new Date(endDate);
+        cashFlows = await myCashflowModel.find()
+        // Always Sort the array by 'income date' in ascending order, when the user want to change this it is up to her
+        //and the settings are to be kept under local storage
+        cashFlows.sort((a, b) => {
+            const [dayA, monthA, yearA] = a.CashFlowDate.split('/');
+            const [dayB, monthB, yearB] = b.CashFlowDate.split('/');
+            return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
+        });
+
+
+        console.log('i am the  update date  procedure  ');
+        const updatedResult = await myCashflowModel.updateOne({ _id: ObjectId(rowId) }, {
+            $set: {
+                CashFlowDate: newDate
+            }
+        })
+        if (updatedResult.modifiedCount > 0) {
+            // Fetch updated data after update
+            const allDocuments = await myCashflowModel.find({});
+            let allCashFlows = [];
+            let advsearchedInputArray = [];
+            let payOutSearchedInputTotal = 0;
+            let payInSearchedInputTotal = 0;
+            let totalExpensesPerRangeAdv = 0;
+            let totalIncomePerRangeAdv = 0;
+
+            // Get base currency
+            const baseCurrency = await myCurrenciesModel.findOne({ BASE_CURRENCY: 'Y' });
+            if (!baseCurrency) {
+                throw new Error('Base currency not found');
+            }
+
+            // Process all documents
+            for (let a = 0; a < allDocuments.length; a++) {
+                const row = allDocuments[a];
+                const date = row.CashFlowDate;
+                const parts = date.split("/");
+                const formattedDate = parts[1] + "/" + parts[0] + "/" + parts[2];
+                const formattedDates2 = new Date(formattedDate);
+
+                // Recalculate the cash equivalent based on the selected currency
+                const relativeRate = row.CashFlowRate / baseCurrency.RATE;
+                row.CashFlowCashEquiv = Number(parseFloat(row.CashFlowAmount) / parseFloat(relativeRate)).toFixed(2);
+
+                // Convert dates to Africa/Harare timezone
+                const startDateZim = moment.tz(startDate, "Africa/Harare").startOf('day').toDate();
+                const endDateZim = moment.tz(endDate, "Africa/Harare").startOf('day').toDate();
+                const formattedDates2Zim = moment.tz(formattedDates2, "Africa/Harare").startOf('day').toDate();
+
+                // Check if the date is within the range
+                if (startDateZim.getTime() <= formattedDates2Zim.getTime() && formattedDates2Zim.getTime() <= endDateZim.getTime()) {
+                    if (row.CashFlowType === 'Payout') {
+                        const match = (row.CashFlowDescription).toLowerCase().includes(advancedSearchInput);
+                        if (match) {
+                            payOutSearchedInputTotal += parseFloat(row.CashFlowCashEquiv);
+                            advsearchedInputArray.push(row);
+                        }
+                        allCashFlows.push(row);
+                        totalExpensesPerRangeAdv += parseFloat(row.CashFlowCashEquiv);
+                    }
+                    if (row.CashFlowType === 'Pay in') {
+                        const match = (row.CashFlowDescription).toLowerCase().includes(advancedSearchInput);
+                        if (match) {
+                            payInSearchedInputTotal += parseFloat(row.CashFlowCashEquiv);
+                            advsearchedInputArray.push(row);
+                        }
+                        allCashFlows.push(row);
+                        totalIncomePerRangeAdv += parseFloat(row.CashFlowCashEquiv);
+                    }
+                }
+            }
+
+            // Paginate the results
+            const startIndex = (parseInt(page) - 1) * parseInt(pageSize);
+            const endIndex = startIndex + parseInt(pageSize);
+            const itemsToProcess = allCashFlows.slice(startIndex, endIndex);
+            const totalPages = Math.ceil(allCashFlows.length / pageSize);
+            const searchedItemsToProcess = advsearchedInputArray.slice(startIndex, endIndex);
+            const searchedTotalPages = Math.ceil(advsearchedInputArray.length / pageSize);
+
+            // Prepare the response data
+            const data = {
+                amUpdated: true,
+                totalPages: totalPages,
+                itemsToProcess: itemsToProcess,
+                searchedTotalPages: searchedTotalPages,
+                searchedItemsToProcess: searchedItemsToProcess,
+                allCashFlows: allCashFlows,
+                advIncomeTotal: totalIncomePerRangeAdv,
+                advExpenseTotal: totalExpensesPerRangeAdv,
+                advSearchedpayinTotal: payInSearchedInputTotal,
+                advSearchedpayoutTotal: payOutSearchedInputTotal,
+            };
+
+            return { data };
+        } else {
+            // No documents were deleted
+            return { data: { amUpdated: false } };
+        }
+
     } catch (err) {
         console.error('Error updating date:', err);
         return { amUpdated: 'Failed to update,please try again' }
@@ -305,22 +354,26 @@ export async function updateCashFlowType(req, rowId, typeSelected, sessionId) {
                 return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
             });
             console.log('i am the  update cashflow type  procedure  ');
-            await myCashflowModel.updateOne({ _id: ObjectId(rowId) }, {
-                $set: {
-                    CashFlowType: typeSelected,
-                    CashFlowCategory: 'suspense'
-                }
-            }).then(result => {
-                console.log(`${result.modifiedCount} document(s) updated.`);
-                modifiedCount = result.modifiedCount
-                if (modifiedCount !== 0) {
+            const updatedDocument = await myCashflowModel.findOneAndUpdate(
+                { _id: ObjectId(rowId) },
+                {
+                    $set: {
+                        CashFlowType: typeSelected,
+                        CashFlowCategory: 'suspense'
+                    }
+                },
+                { new: true } // Return the updated document
+            );
 
-                    amUpdated = true;
-                }
-                else if (modifiedCount === 0) {
-                    amUpdated = false;
-                }
-            })
+            if (updatedDocument) {
+                console.log('Document updated successfully:', updatedDocument);
+                amUpdated = true;
+            } else {
+                console.log('No document was updated.');
+                amUpdated = false;
+            }
+
+
             //update the categories based on the type selected
             if (typeSelected === 'Pay in') {
                 typeSelected = 'PayIn'
@@ -329,7 +382,6 @@ export async function updateCashFlowType(req, rowId, typeSelected, sessionId) {
                 typeSelected = 'PayOut'
             }
             let categoryExist = await myCategoriesModel.findOne({ category: 'suspense', Balance: typeSelected });
-            console.log(typeSelected)
             if (!categoryExist) {
                 try {
                     const categoryEntry = new myCategoriesModel({ category: 'suspense', CategoryLimit: 0, CategoryLimitRange: '', Balance: typeSelected });
@@ -339,7 +391,7 @@ export async function updateCashFlowType(req, rowId, typeSelected, sessionId) {
                     console.error("Error saving category", error);
                 }
             }
-            return { amUpdated };
+            return { amUpdated, updatedDocument };
         }
 
     } catch (err) {
@@ -401,14 +453,14 @@ export async function updateCashFlowTax(req, rowId, taxDataToUpdate, sessionId) 
                 const [dayB, monthB, yearB] = b.CashFlowDate.split('/');
                 return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
             });
-
+            let updatedDocument
             for (let v = 0; v < taxDataToUpdate.length; v++) {
                 const tax = taxDataToUpdate[v];
                 if (tax.taxName === 'vat') {
 
                     if (tax.VatStatus === 'N') {
-                        console.log('i am the  update cashflow vat procedure  to false ' + tax.VatStatus + rowId);
-                        await myCashflowModel.updateOne({ _id: ObjectId(rowId) },  // Find the document by its _id
+
+                        updatedDocument = await myCashflowModel.findOneAndUpdate({ _id: ObjectId(rowId) },  // Find the document by its _id
                             {
                                 $set: {
                                     "Tax.vat.QRCode": tax.QRCode,  // Update only the taxStatusus field inside the Vat object
@@ -419,23 +471,20 @@ export async function updateCashFlowTax(req, rowId, taxDataToUpdate, sessionId) 
                                     "Tax.vat.VatAmount": tax.VatAmount, // Update only the taxStatus field inside the Vat object
                                     "Tax.vat.VatStatus": tax.VatStatus  // Update only the VatStatus field inside the Vat object
                                 }
-                            }
-                        ).then(result => {
-                            console.log(`${result.modifiedCount} document(s) updated.`);
-                            modifiedCount = result.modifiedCount;
-
-                            if (modifiedCount !== 0) {
-                                amUpdated = true;
-                            } else {
-                                amUpdated = false;
-                            }
-                        }).catch(err => {
-                            console.error("Error updating the document:", err);
-                        });
+                            },
+                            { new: true } // Return the updated document
+                        )
+                        if (updatedDocument) {
+                            console.log('Document updated successfully:', updatedDocument);
+                            amUpdated = true;
+                        } else {
+                            console.log('No document was updated.');
+                            amUpdated = false;
+                        }
                     } else if (tax.VatStatus === 'Y') {
                         console.log('i am the  update cashflow vat procedure  to true ' + tax.VatStatus + rowId);
 
-                        await myCashflowModel.updateOne({ _id: ObjectId(rowId) },  // Find the document by its _id
+                        updatedDocument = await myCashflowModel.findOneAndUpdate({ _id: ObjectId(rowId) },  // Find the document by its _id
                             {
                                 $set: {
                                     "Tax.vat.QRCode": tax.QRCode,  // Update only the taxStatusus field inside the Vat object
@@ -446,26 +495,23 @@ export async function updateCashFlowTax(req, rowId, taxDataToUpdate, sessionId) 
                                     "Tax.vat.VatAmount": tax.VatAmount, // Update only the taxStatus field inside the Vat object
                                     "Tax.vat.VatStatus": tax.VatStatus  // Update only the VatStatus field inside the Vat object
                                 }
-                            }
-                        ).then(result => {
-                            console.log(`${result.modifiedCount} document(s) updated.`);
-                            modifiedCount = result.modifiedCount;
-
-                            if (modifiedCount !== 0) {
-                                amUpdated = true;
-                            } else {
-                                amUpdated = false;
-                            }
-                        }).catch(err => {
-                            console.error("Error updating the document:", err);
-                        });
+                            },
+                            { new: true } // Return the updated document
+                        )
+                        if (updatedDocument) {
+                            console.log('Document updated successfully:', updatedDocument);
+                            amUpdated = true;
+                        } else {
+                            console.log('No document was updated.');
+                            amUpdated = false;
+                        }
                     }
                 }
                 else if (tax.taxName === 'ztf') {
                     if (tax.ZtfStatus === 'N') {
                         console.log('i am the  update cashflow ztf procedure FALSE ' + tax.ZtfStatus + rowId);
 
-                        await myCashflowModel.updateOne({ _id: ObjectId(rowId) },  // Find the document by its _id
+                        updatedDocument = await myCashflowModel.findOneAndUpdate({ _id: ObjectId(rowId) },  // Find the document by its _id
                             {
                                 $set: {
                                     "Tax.ztf.First": tax.First,  // Update only the taxStatusus field inside the Vat object
@@ -473,23 +519,20 @@ export async function updateCashFlowTax(req, rowId, taxDataToUpdate, sessionId) 
                                     "Tax.ztf.LevyAmount": tax.LevyAmount, // Update only the taxStatusus field inside the Vat object
                                     "Tax.ztf.ZtfStatus": tax.ZtfStatus  // Update only the VatStatus field inside the Vat object
                                 }
-                            }
-                        ).then(result => {
-                            console.log(`${result.modifiedCount} document(s) updated.`);
-                            modifiedCount = result.modifiedCount;
-
-                            if (modifiedCount !== 0) {
-                                amUpdated = true;
-                            } else {
-                                amUpdated = false;
-                            }
-                        }).catch(err => {
-                            console.error("Error updating the document:", err);
-                        });
+                            },
+                            { new: true } // Return the updated document
+                        )
+                        if (updatedDocument) {
+                            console.log('Document updated successfully:', updatedDocument);
+                            amUpdated = true;
+                        } else {
+                            console.log('No document was updated.');
+                            amUpdated = false;
+                        }
                     }
                     else if (tax.ZtfStatus === 'Y') {
                         console.log('i am the  update cashflow ztf procedure YES ' + tax.ZtfStatus + tax.LevyAmount);
-                        await myCashflowModel.updateOne({ _id: ObjectId(rowId) },  // Find the document by its _id
+                        updatedDocument = await myCashflowModel.findOneAndUpdate({ _id: ObjectId(rowId) },  // Find the document by its _id
                             {
                                 $set: {
                                     "Tax.ztf.First": tax.First,  // Update only the taxStatusus field inside the Vat object
@@ -497,23 +540,21 @@ export async function updateCashFlowTax(req, rowId, taxDataToUpdate, sessionId) 
                                     "Tax.ztf.LevyAmount": tax.LevyAmount, // Update only the taxStatusus field inside the Vat object
                                     "Tax.ztf.ZtfStatus": tax.ZtfStatus  // Update only the VatStatus field inside the Vat object
                                 }
-                            }
-                        ).then(result => {
-                            modifiedCount = result.modifiedCount;
-
-                            if (modifiedCount !== 0) {
-                                amUpdated = true;
-                            } else {
-                                amUpdated = false;
-                            }
-                        }).catch(err => {
-                            console.error("Error updating the document:", err);
-                        });
+                            },
+                            { new: true } // Return the updated document
+                        )
+                        if (updatedDocument) {
+                            console.log('Document updated successfully:', updatedDocument);
+                            amUpdated = true;
+                        } else {
+                            console.log('No document was updated.');
+                            amUpdated = false;
+                        }
                     }
                 }
 
             }
-            return { amUpdated }
+            return { amUpdated, updatedDocument }
         }
 
     } catch (err) {
@@ -538,22 +579,22 @@ export async function updateCashFlowInvoice(req, rowId, InvoiceRef, sessionId) {
                 return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
             });
             console.log('i am the  update cashflow InvoiceRef  procedure  ');
-            await myCashflowModel.updateOne({ _id: ObjectId(rowId) }, {
+            const updatedDocument = await myCashflowModel.findOneAndUpdate({ _id: ObjectId(rowId) }, {
                 $set: {
                     CashFlowInvoiceRef: InvoiceRef
                 }
-            }).then(result => {
-                console.log(`${result.modifiedCount} document(s) updated.`);
-                modifiedCount = result.modifiedCount
-                if (modifiedCount !== 0) {
-                    amUpdated = true;
-                }
-                else if (modifiedCount === 0) {
-                    amUpdated = false;
-                }
-            })
+            },
+                { new: true } // Return the updated document
+            )
+            if (updatedDocument) {
+                console.log('Document updated successfully:', updatedDocument);
+                amUpdated = true;
+            } else {
+                console.log('No document was updated.');
+                amUpdated = false;
+            }
 
-            return { amUpdated };
+            return { amUpdated, updatedDocument };
         }
     } catch (err) {
         console.error('Error updating invoice number:', err);
@@ -577,21 +618,22 @@ export async function updateCashFlowDescription(req, rowId, description, session
                 return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
             });
             console.log('i am the  update cashflow description  procedure  ');
-            await myCashflowModel.updateOne({ _id: ObjectId(rowId) }, {
+            const updatedDocument = await myCashflowModel.findOneAndUpdate({ _id: ObjectId(rowId) }, {
                 $set: {
                     CashFlowDescription: description
                 }
-            }).then(result => {
-                console.log(`${result.modifiedCount} document(s) updated.`);
-                modifiedCount = result.modifiedCount
-                if (modifiedCount !== 0) {
-                    amUpdated = true;
-                }
-                else if (modifiedCount === 0) {
-                    amUpdated = false;
-                }
-            })
-            return { amUpdated };
+            },
+                { new: true } // Return the updated document
+            )
+            if (updatedDocument) {
+                console.log('Document updated successfully:', updatedDocument);
+                amUpdated = true;
+            } else {
+                console.log('No document was updated.');
+                amUpdated = false;
+            }
+
+            return { amUpdated, updatedDocument };
         }
     } catch (err) {
         console.error('Error updating description:', err);
@@ -614,19 +656,20 @@ export async function updateCashFlowCategory(req, rowId, newCategory, sessionId)
                 return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
             });
             console.log('i am the  update cashflow category  procedure  ');
-            await myCashflowModel.updateOne({ _id: ObjectId(rowId) }, {
+            const updatedDocument = await myCashflowModel.findOneAndUpdate({ _id: ObjectId(rowId) }, {
                 $set: { CashFlowCategory: newCategory }
-            }).then(result => {
-                console.log(`${result.modifiedCount} document(s) updated.`);
-                modifiedCount = result.modifiedCount
-                if (modifiedCount !== 0) {
-                    amUpdated = true;
-                }
-                else if (modifiedCount === 0) {
-                    amUpdated = false;
-                }
-            })
-            return { amUpdated };
+            },
+                { new: true } // Return the updated document
+            )
+            if (updatedDocument) {
+                console.log('Document updated successfully:', updatedDocument);
+                amUpdated = true;
+            } else {
+                console.log('No document was updated.');
+                amUpdated = false;
+            }
+
+            return { amUpdated, updatedDocument };
         }
     } catch (err) {
         console.error('Error updating:', err);
@@ -650,23 +693,23 @@ export async function updateCashFlowCurrency(req, rowId, newCurrency, cashEquivV
                 return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
             });
             console.log('i am the  update cashflow description  procedure  ');
-            await myCashflowModel.updateOne({ _id: ObjectId(rowId) }, {
+            const updatedDocument = await myCashflowModel.findOneAndUpdate({ _id: ObjectId(rowId) }, {
                 $set: {
                     CashFlowCurrency: newCurrency,
                     CashFlowRate: newCashFlowRate1, CashFlowCashEquiv: cashEquivValue
                 }
-            }).then(result => {
-                console.log(`${result.modifiedCount} document(s) updated.`);
-                modifiedCount = result.modifiedCount
-                if (modifiedCount !== 0) {
-                    amUpdated = true;
-                }
-                else if (modifiedCount === 0) {
-                    amUpdated = false;
-                }
-            })
+            },
+                { new: true } // Return the updated document
+            )
+            if (updatedDocument) {
+                console.log('Document updated successfully:', updatedDocument);
+                amUpdated = true;
+            } else {
+                console.log('No document was updated.');
+                amUpdated = false;
+            }
 
-            return { amUpdated };
+            return { amUpdated, updatedDocument };
         }
     } catch (err) {
         console.error('Error updating:', err);
@@ -689,22 +732,23 @@ export async function updateCashFlowAmount(req, rowId, newAmount, cashEquivValue
                 return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
             });
             console.log('i am the  update cashflow amount  procedure  ');
-            await myCashflowModel.updateOne({ _id: ObjectId(rowId) }, {
+            const updatedDocument = await myCashflowModel.findOneAndUpdate({ _id: ObjectId(rowId) }, {
                 $set: {
                     CashFlowAmount: newAmount,
                     CashFlowCashEquiv: cashEquivValue
                 }
-            }).then(result => {
-                console.log(`${result.modifiedCount} document(s) updated.`);
-                modifiedCount = result.modifiedCount
-                if (modifiedCount !== 0) {
-                    amUpdated = true;
-                }
-                else if (modifiedCount === 0) {
-                    amUpdated = false;
-                }
-            })
-            return { amUpdated };
+            },
+                { new: true } // Return the updated document
+            )
+            if (updatedDocument) {
+                console.log('Document updated successfully:', updatedDocument);
+                amUpdated = true;
+            } else {
+                console.log('No document was updated.');
+                amUpdated = false;
+            }
+
+            return { amUpdated, updatedDocument };
         }
     } catch (err) {
         console.error('Error updating amount:', err);
@@ -713,12 +757,13 @@ export async function updateCashFlowAmount(req, rowId, newAmount, cashEquivValue
     }
 }
 //====================================================================================================================
-export async function updateCashFlowRate(req, rowId, newRate, newCashFlowCashEquiv, sessionId) {
+export async function updateCashFlowRate(req, rowId, newRate, newCashFlowCashEquiv1, sessionId) {
     try {
         const db = await connectDB(req, databaseName, signingCriteria, sessionId);
         if (db) {
             // Create the model with the specific connection
             const myCashflowModel = CashflowModel(db);
+
             // Always Sort the array by 'income date' in ascending order, when the user want to change this it is up to her
             //and the settings are to be kept under local storage
             cashFlows.sort((a, b) => {
@@ -727,23 +772,25 @@ export async function updateCashFlowRate(req, rowId, newRate, newCashFlowCashEqu
                 return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
             });
             console.log('i am the  update cashflow rate  procedure  ');
-            await myCashflowModel.updateOne({ _id: ObjectId(rowId) }, {
+            const updatedDocument = await myCashflowModel.findOneAndUpdate({ _id: ObjectId(rowId) }, {
                 $set: {
                     CashFlowRate: newRate,
-                    CashFlowCashEquiv: newCashFlowCashEquiv
+                    CashFlowCashEquiv: newCashFlowCashEquiv1
                 }
-            }).then(result => {
-                console.log(`${result.modifiedCount} document(s) updated.`);
-                modifiedCount = result.modifiedCount
-                if (modifiedCount !== 0) {
-                    amUpdated = true;
-                }
-                else if (modifiedCount === 0) {
-                    amUpdated = false;
-                }
-            })
+            },
+                { new: true } // Return the updated document
+            )
 
-            return { amUpdated };
+            if (updatedDocument) {
+                console.log('Document updated successfully:', updatedDocument);
+                amUpdated = true;
+            } else {
+                console.log('No document was updated.');
+                amUpdated = false;
+            }
+            console.log(updatedDocument)
+
+            return { amUpdated, updatedDocument };
         }
     } catch (err) {
         console.error('Error updating rate:', err);
@@ -752,42 +799,263 @@ export async function updateCashFlowRate(req, rowId, newRate, newCashFlowCashEqu
     }
 }
 //====================================================================================================================
-export async function deleteCashFLow(req, checkedRowsId, sessionId) {
+// export async function deleteCashFLow(req, startDate, endDate, pageSize, page, advancedSearchInput, checkedRowsId, sessionId) {
+//     try {
+//         const db = await connectDB(req, databaseName, signingCriteria, sessionId);
+//         if (db) {
+//             startDate = new Date(startDate)
+//             endDate = new Date(endDate)
+//             // Create the model with the specific connection
+//             const myCashflowModel = CashflowModel(db);
+//             const myCurrenciesModel = CurrenciesModel(db);
+//             // Always Sort the array by 'income date' in ascending order, when the user want to change this it is up to her
+//             //and the settings are to be kept under local storage
+//             cashFlows = await myCashflowModel.find({})
+//             cashFlows.sort((a, b) => {
+//                 const [dayA, monthA, yearA] = a.CashFlowDate.split('/');
+//                 const [dayB, monthB, yearB] = b.CashFlowDate.split('/');
+//                 return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
+//             });
+//             console.log('i am the  delete cashflow row  procedure  ');
+//             let deleteIds = [];
+//             for (let i = 0; i < checkedRowsId.length; i++) {
+//                 const cashFlowId = checkedRowsId[i];//get the array of ids to delete
+//                 deleteIds.push(ObjectId(cashFlowId));//make each id an object of mongo db id
+//             }
+//             // Find and store deleted documents BEFORE deleting them
+//             await myCashflowModel.deleteMany({ _id: { $in: deleteIds } })
+//                 .then(result => {
+//                     console.log(`${result.deletedCount} document(s) were deleted`);
+//                     if (result.deletedCount > 0) {
+//                         amDeleted = true;
+//                         console.log(`${result.deletedCount} document(s) were deleted successfully.`);
+//                         updatedData()
+//                     }
+//                     else if (result.deletedCount === 0) {
+//                         amDeleted = false;
+//                         const data = {}
+//                         return { data }
+//                     }
+
+//                 })
+
+//             async function updatedData() {
+//                 const allDocuments = await myCashflowModel.find({});
+//                 let allCashFlows = []
+//                 let advsearchedInputArray = []
+//                 let payOutSearchedInputTotal = 0
+//                 let payInSearchedInputTotal = 0
+//                 let totalExpensesPerRangeAdv = 0
+//                 let totalIncomePerRangeAdv = 0
+//                 let baseCurrency = await myCurrenciesModel.findOne({ BASE_CURRENCY: 'Y' });
+//                 if (!baseCurrency) {
+//                     return
+//                 }
+//                 for (let a = 0; a < allDocuments.length; a++) { //first loop for the purpose of PAYINs AND OUTs totals
+//                     //DURING THIS LOOP, ONE CAN TAKE ADVANTAGE AND CALCULATE THE OPENING BAL FOR BOTH THE PAYINs AND OUTs
+//                     const row = allDocuments[a];
+//                     const date = row.CashFlowDate;
+//                     //    console.log(row)
+//                     const parts = date.split("/");
+//                     const formattedDate = parts[1] + "/" + parts[0] + "/" + parts[2];
+//                     const formattedDates2 = new Date(formattedDate);
+//                     //RE CALCULATE THE CASH EQUIVE BASE ON THE CURRENCY SELECTED
+//                     const relativeRate = row.CashFlowRate / baseCurrency.RATE;
+//                     row.CashFlowCashEquiv = Number(parseFloat(row.CashFlowAmount) / parseFloat(relativeRate)).toFixed(2);
+//                     startDate = moment.tz(startDate, "Africa/Harare").startOf('day'); // Midnight in Zimbabwe
+//                     endDate = moment.tz(endDate, "Africa/Harare").startOf('day'); // Midnight in Zimbabwe
+//                     // Convert to JavaScript Date objects (without shifting to UTC)
+//                     startDate = startDate.toDate();
+//                     endDate = endDate.toDate();
+//                     // Ensure formattedDates2 is also in Zimbabwe timezone
+//                     const formattedDates2Zim = moment.tz(formattedDates2, "Africa/Harare").startOf('day').toDate();
+//                     if (startDate.getTime() <= formattedDates2Zim.getTime() && formattedDates2Zim.getTime() <= endDate.getTime()) {
+//                         //FOR ADVANCE
+//                         if (row.CashFlowType === 'Payout') {
+//                             //ALSO IF THE SARCH INPUT HAS SOMETHING BUT THE CATEGORY FILTE DOESNT
+//                             const match = (row.CashFlowDescription).toLowerCase().includes(advancedSearchInput)
+//                             if (match) {
+//                                 //collect the totals of the filterd stuff
+//                                 payOutSearchedInputTotal += parseFloat(row.CashFlowCashEquiv);
+//                                 //THEN CREATE THE ARRAY FOR all the searched stuff
+//                                 advsearchedInputArray.push(cashFlows[a])
+//                             }
+//                             allCashFlows.push(cashFlows[a])
+
+//                             //get totals for advanced sheet
+//                             totalExpensesPerRangeAdv = parseFloat(totalExpensesPerRangeAdv) + parseFloat(row.CashFlowCashEquiv)
+//                         }
+//                         if (row.CashFlowType === 'Pay in') {
+//                             //ALSO IF THE SARCH INPUT HAS SOMETHING BUT THE CATEGORY FILTE DOESNT
+//                             const match = (row.CashFlowDescription).toLowerCase().includes(advancedSearchInput)
+//                             if (match) {
+//                                 //collect the totals of the filterd stuff
+//                                 payInSearchedInputTotal += parseFloat(row.CashFlowCashEquiv);
+//                                 //THEN CREATE THE ARRAY FOR all the searched stuff
+//                                 advsearchedInputArray.push(cashFlows[a])
+//                             }
+//                             allCashFlows.push(cashFlows[a])
+
+//                             //get totals for advanced sheet
+//                             totalIncomePerRangeAdv = parseFloat(totalIncomePerRangeAdv) + (row.CashFlowCashEquiv)
+//                             //get the payOuts
+//                         }
+
+//                     }
+//                 }
+//                 const startIndex = (parseInt(page) - 1) * parseInt(pageSize);
+//                 const endIndex = startIndex + parseInt(pageSize);
+//                 const itemsToProcess = allCashFlows.slice(startIndex, endIndex);
+//                 const totalPages = Math.ceil(allCashFlows.length / pageSize);
+//                 const searchedItemsToProcess = advsearchedInputArray.slice(startIndex, endIndex);
+//                 const searchedTotalPages = Math.ceil(advsearchedInputArray.length / pageSize);
+//                 const advIncomeTotal = totalIncomePerRangeAdv;
+//                 const advExpenseTotal = totalExpensesPerRangeAdv;
+//                 const advSearchedpayoutTotal = payOutSearchedInputTotal;
+//                 const advSearchedpayinTotal = payInSearchedInputTotal;
+
+//                 const data = {
+//                     amDeleted: true,
+//                     totalPages: totalPages,
+//                     itemsToProcess: itemsToProcess, //THIS MUST ONLY CONTAINS THE INFORMATION OF WHATEVER THAT IS THE CURRENT PAGE BY THE USER
+//                     totalPages: totalPages,
+//                     searchedTotalPages: searchedTotalPages,
+//                     searchedItemsToProcess: searchedItemsToProcess,
+//                     allCashFlows: allCashFlows,
+//                     advIncomeTotal: advIncomeTotal,
+//                     advExpenseTotal: advExpenseTotal,
+//                     advSearchedpayinTotal: advSearchedpayinTotal,
+//                     advSearchedpayoutTotal: advSearchedpayoutTotal,
+
+//                 };
+//                 console.log('data')
+//                 console.log(data + 'data')
+//                 return { data };
+//             }
+
+//         }
+//     } catch (error) {
+//         console.error(error);
+//         return { status: 401, amDeleted: false, deletedDocuments: [] };
+//     }
+// }
+export async function deleteCashFLow(req, startDate, endDate, pageSize, page, advancedSearchInput, checkedRowsId, sessionId) {
     try {
         const db = await connectDB(req, databaseName, signingCriteria, sessionId);
-        if (db) {
-            // Create the model with the specific connection
-            const myCashflowModel = CashflowModel(db);
-            // Always Sort the array by 'income date' in ascending order, when the user want to change this it is up to her
-            //and the settings are to be kept under local storage
-            cashFlows.sort((a, b) => {
-                const [dayA, monthA, yearA] = a.CashFlowDate.split('/');
-                const [dayB, monthB, yearB] = b.CashFlowDate.split('/');
-                return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
-            });
-            console.log('i am the  delete cashflow row  procedure  ');
-            let deleteIds = [];
-            for (let i = 0; i < checkedRowsId.length; i++) {
-                const cashFlowId = checkedRowsId[i];//get the array of ids to delete
-                deleteIds.push(ObjectId(cashFlowId));//make each id an object of mongo db id
-            }
-            await myCashflowModel.deleteMany({ _id: { $in: deleteIds } })
-                .then(result => {
-                    console.log(`${result.deletedCount} document(s) were deleted`);
-                    if (result.deletedCount !== 0) {
-                        amDeleted = true;
-                    }
-                    else if (result.deletedCount === 0) {
-                        amDeleted = false;
-                    }
-                })
-            const allDocuments = await myCashflowModel.find();
+        if (!db) {
+            throw new Error('Failed to connect to the database');
+        }
 
-            return { amDeleted, allDocuments };
+        // Create the model with the specific connection
+        const myCashflowModel = CashflowModel(db);
+        const myCurrenciesModel = CurrenciesModel(db);
+
+        // Convert startDate and endDate to Date objects
+        startDate = new Date(startDate);
+        endDate = new Date(endDate);
+
+        // Always Sort the array by 'income date' in ascending order
+        let cashFlows = await myCashflowModel.find({});
+        cashFlows.sort((a, b) => {
+            const [dayA, monthA, yearA] = a.CashFlowDate.split('/');
+            const [dayB, monthB, yearB] = b.CashFlowDate.split('/');
+            return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
+        });
+
+        console.log('i am the delete cashflow row procedure');
+
+        // Convert checkedRowsId to MongoDB ObjectIds
+        const deleteIds = checkedRowsId.map(id => ObjectId(id));
+
+        // Delete documents
+        const deleteResult = await myCashflowModel.deleteMany({ _id: { $in: deleteIds } });
+        console.log(`${deleteResult.deletedCount} document(s) were deleted`);
+
+        if (deleteResult.deletedCount > 0) {
+            // Fetch updated data after deletion
+            const allDocuments = await myCashflowModel.find({});
+            let allCashFlows = [];
+            let advsearchedInputArray = [];
+            let payOutSearchedInputTotal = 0;
+            let payInSearchedInputTotal = 0;
+            let totalExpensesPerRangeAdv = 0;
+            let totalIncomePerRangeAdv = 0;
+
+            // Get base currency
+            const baseCurrency = await myCurrenciesModel.findOne({ BASE_CURRENCY: 'Y' });
+            if (!baseCurrency) {
+                throw new Error('Base currency not found');
+            }
+
+            // Process all documents
+            for (let a = 0; a < allDocuments.length; a++) {
+                const row = allDocuments[a];
+                const date = row.CashFlowDate;
+                const parts = date.split("/");
+                const formattedDate = parts[1] + "/" + parts[0] + "/" + parts[2];
+                const formattedDates2 = new Date(formattedDate);
+
+                // Recalculate the cash equivalent based on the selected currency
+                const relativeRate = row.CashFlowRate / baseCurrency.RATE;
+                row.CashFlowCashEquiv = Number(parseFloat(row.CashFlowAmount) / parseFloat(relativeRate)).toFixed(2);
+
+                // Convert dates to Africa/Harare timezone
+                const startDateZim = moment.tz(startDate, "Africa/Harare").startOf('day').toDate();
+                const endDateZim = moment.tz(endDate, "Africa/Harare").startOf('day').toDate();
+                const formattedDates2Zim = moment.tz(formattedDates2, "Africa/Harare").startOf('day').toDate();
+
+                // Check if the date is within the range
+                if (startDateZim.getTime() <= formattedDates2Zim.getTime() && formattedDates2Zim.getTime() <= endDateZim.getTime()) {
+                    if (row.CashFlowType === 'Payout') {
+                        const match = (row.CashFlowDescription).toLowerCase().includes(advancedSearchInput);
+                        if (match) {
+                            payOutSearchedInputTotal += parseFloat(row.CashFlowCashEquiv);
+                            advsearchedInputArray.push(row);
+                        }
+                        allCashFlows.push(row);
+                        totalExpensesPerRangeAdv += parseFloat(row.CashFlowCashEquiv);
+                    } else if (row.CashFlowType === 'Pay in') {
+                        const match = (row.CashFlowDescription).toLowerCase().includes(advancedSearchInput);
+                        if (match) {
+                            payInSearchedInputTotal += parseFloat(row.CashFlowCashEquiv);
+                            advsearchedInputArray.push(row);
+                        }
+                        allCashFlows.push(row);
+                        totalIncomePerRangeAdv += parseFloat(row.CashFlowCashEquiv);
+                    }
+                }
+            }
+
+            // Paginate the results
+            const startIndex = (parseInt(page) - 1) * parseInt(pageSize);
+            const endIndex = startIndex + parseInt(pageSize);
+            const itemsToProcess = allCashFlows.slice(startIndex, endIndex);
+            const totalPages = Math.ceil(allCashFlows.length / pageSize);
+            const searchedItemsToProcess = advsearchedInputArray.slice(startIndex, endIndex);
+            const searchedTotalPages = Math.ceil(advsearchedInputArray.length / pageSize);
+
+            // Prepare the response data
+            const data = {
+                amDeleted: true,
+                totalPages: totalPages,
+                itemsToProcess: itemsToProcess,
+                searchedTotalPages: searchedTotalPages,
+                searchedItemsToProcess: searchedItemsToProcess,
+                allCashFlows: allCashFlows,
+                advIncomeTotal: totalIncomePerRangeAdv,
+                advExpenseTotal: totalExpensesPerRangeAdv,
+                advSearchedpayinTotal: payInSearchedInputTotal,
+                advSearchedpayoutTotal: payOutSearchedInputTotal,
+            };
+
+            return { data };
+        } else {
+            // No documents were deleted
+            return { data: { amDeleted: false } };
         }
     } catch (error) {
-        console.error(error);
-        return { status: 401, amDeleted: false };
+        console.error('Error in deleteCashFLow:', error);
+        return { status: 401, amDeleted: false, deletedDocuments: [] };
     }
 }
 //============================================================================================================
@@ -1046,7 +1314,7 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
 
                 }
                 else if (data.Id !== '') {
-
+                    console.log('ndamu id')
                     try {
                         let myType = ''
                         if (data.Type === 'Pay in') {
@@ -1096,10 +1364,11 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
 
                         // Check if the update was successful
                         if (result.modifiedCount > 0) {
-                            isSaving = true;
+                            console.log('zvaita')
+                            isSaving = 'Update successful';
                             insertedDocuments.push(result.modifiedCount); // Store the count of updated documents
                         } else {
-                            isSaving = false;
+                            isSaving = 'No documents were updated';
                         }
                     } catch (error) {
                         console.error('Error updating document:', error);
@@ -1128,7 +1397,6 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
                 }
             });
         });
-
         // Perform the bulk insert operation for both Pay In and Pay Out data
         if (operations.length > 0) {
             const result = await myCashflowModel.bulkWrite(operations);
@@ -1142,7 +1410,8 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
             insertedDocuments = await myCashflowModel.find({ _id: { $in: insertedIds } });
 
         } else {
-            return { isSaving: false, insertedDocuments: [] };
+            isSaving = false,
+                insertedDocuments = [];
         }
         //then save any new categories
 
@@ -1164,7 +1433,6 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
                 return { isSaved: false };
             }
         }
-        console.log(insertedCategories)
         return { isSaving, insertedDocuments, insertedCategories }
     } catch (error) {
         console.error('Error inserting documents:', error);
@@ -1179,7 +1447,8 @@ export async function saveCashFlowData(req, itemsToProcess, sessionId) {
         if (db) {
             // Create the model with the specific connection
             const myCashflowModel = CashflowModel(db);
-
+            let allDocuments = []
+            insertedDocuments = []
             for (let a = 0; a < itemsToProcess.length; a++) {
                 const item = itemsToProcess[a];
                 const cashflowentry = new myCashflowModel(item);
@@ -1187,8 +1456,8 @@ export async function saveCashFlowData(req, itemsToProcess, sessionId) {
                     const result = await cashflowentry.save();
                     if (result) {
                         isSaving = true;
-                        insertedDocuments = await myCashflowModel.find();
-
+                        allDocuments = await myCashflowModel.find();
+                        insertedDocuments.push(result); // Directly push the saved document
                     }
                 } catch (saveError) {
                     console.error('Error saving cash flow entry:', saveError);
@@ -1196,7 +1465,7 @@ export async function saveCashFlowData(req, itemsToProcess, sessionId) {
                 }
             }
 
-            return { isSaving, insertedDocuments };
+            return { isSaving, insertedDocuments, allDocuments };
         }
     } catch (error) {
         console.error('Error inserting documents:', error);
