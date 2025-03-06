@@ -8,6 +8,7 @@ import { connectDB } from '../Schemas/slyretailDbConfig.js';
 //=================================================================================================================================================
 //THIS CALCULATES ALL THE CASH INFLOWS AND OUTFLOWS FOR A PARTICULAR PERIOD AND PRESENTS IT TO THE USER ON AN ASCENDING ORDER
 let cashFlows = []
+let anyUpdateSuccessful=''
 let amUpdated = false;
 let modifiedCount;
 let amDeleted = false;
@@ -1364,16 +1365,18 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
 
                         // Check if the update was successful
                         if (result.modifiedCount > 0) {
-                            console.log('zvaita')
-                            isSaving = 'Update successful';
-                            insertedDocuments.push(result.modifiedCount); // Store the count of updated documents
+                            anyUpdateSuccessful = true; // At least one update succeeded
+                            // Fetch the updated document and add it to insertedDocuments
+                            const updatedDocument = await myCashflowModel.findOne({ _id: ObjectId(data.Id) });
+                            insertedDocuments.push(updatedDocument);
                         } else {
-                            isSaving = 'No documents were updated';
+                           console.log(`No changes made to document with _id: ${data.Id}`);
                         }
                     } catch (error) {
-                        console.error('Error updating document:', error);
-                        isSaving = 'Error updating document';
+                        console.error(`Error updating document with _id: ${data.Id}:`, error);
                     }
+                      // Set isSaving based on whether any update succeeded
+                    isSaving = anyUpdateSuccessful;
                 }
             }
         }
@@ -1410,8 +1413,10 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
             insertedDocuments = await myCashflowModel.find({ _id: { $in: insertedIds } });
 
         } else {
-            isSaving = false,
+           if (insertedDocuments.length === 0) {
+                isSaving = false,
                 insertedDocuments = [];
+            }
         }
         //then save any new categories
 
