@@ -1,12 +1,14 @@
 
 import { WorldCurrencies } from "./worldCurrency.js";
+
+
 let newCurrencies = []; let newIncomeCategories = [];
 let newExpenseCategories = []; let startDate = ""; let endDate = ""; let isoCode = ''; let symbol = ''; let selectedDate = ''; let dataArray = []; let checkedRows = []; let headersStatus = []; let formattedValue = ''
 let sign = ''; let openingBalance = 0; let currentPage; let isEditMode = false; let advItemsPerPage; let totalPayOutsRange = 0; let totalPayInsRange = 0; let checkedRowsId = []
 let totalCash = 0
 let totalPages = 0; let displayModal = false; let cashFlowArray = []; let advExportingCriteria = "FullExport"; let page = 0; let pageSize = 0; let hasId = false;
 let vatIsChecked = false; let taxtypeSelected = ''; let rowData = []; let rowDataFromDb = []; let itemsToProcess = []; let taxStatus = 'N';
-let errorMsgs = []
+let errorMsgs = []; let totalUpdatePayins = 0; let totalUpdatePayouts = 0
 fetch('/currencies')
     .then(response => response.json())
     .then(currencies => {
@@ -1169,7 +1171,7 @@ fetch('/currencies')
                             defaultDisplayContent2(startDate, endDate)
                         });
                         //=========================================================================================================
-                        function defaultDisplayContent2(startDate, endDate) {
+                        async function defaultDisplayContent2(startDate, endDate) {
                             cashFlowArray = []
                             //GET THE L/S STORED STARTIND DATE AND THE END DATE
                             //GET THE L/S PAGE SIZE AND PAGE NUIMBER
@@ -1190,101 +1192,110 @@ fetch('/currencies')
                             }
                             const advancedSearchInput = localStorage.getItem('advSearchInput');
                             //apply a loader 
-                            fetch('/defaultDisplayThePaginationWay', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    startDate: startDate,
-                                    endDate: endDate,
-                                    pageSize: pageSize,
-                                    page: page,
-                                    advancedSearchInput: advancedSearchInput,
-                                    sessionId: sessionId
-                                })
-                            })
-                                .then(response => response.json())
-                                .then(data => {
+                            try {
+                                const response = await fetch('/defaultDisplayThePaginationWay', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        startDate: startDate,
+                                        endDate: endDate,
+                                        pageSize: pageSize,
+                                        page: page,
+                                        advancedSearchInput: advancedSearchInput,
+                                        sessionId: sessionId
+                                    })
+                                });
 
-                                    // From the server, the computation of the total income and expenses (as well as by filter) per range has been done
-                                    //TOP GRANT TOTALS COMPUTATION
-                                    itemsToProcess = []
-                                    let totalPages
-                                    let cashBalance = 0
+                                const data = await response.json();
 
-                                    if (advancedSearchInput !== null) {
-                                        totalPages = parseInt(data.advSearchedTotalPages)
-                                        cashFlowArray = data.advSearchedItemsToProcess
-                                        itemsToProcess = data.advSearchedItemsToProcess
-                                        cashBalance = Number((parseFloat(data.payInSearchedInputTotal) + parseFloat(data.openingBalance)) - parseFloat(data.payOutSearchedInputTotal)).toFixed(2);
-                                        currentCashFlowTable(totalPages, page, pageSize, itemsToProcess)
-                                    }
-                                    else if (advancedSearchInput === null) {
-                                        totalPages = parseInt(data.totalPages2)
-                                        cashFlowArray = data.itemsToProcess2
-                                        itemsToProcess = data.itemsToProcess2
-                                        cashBalance = Number((parseFloat(data.totalIncomePerRangeAdv) + parseFloat(data.openingBalance)) - parseFloat(data.totalExpensesPerRangeAdv)).toFixed(2);
-                                        currentCashFlowTable(totalPages, page, pageSize, itemsToProcess)
-                                    }
-                                    //if the totals are equal to 0 of the generated range.dispay message that there is no items t display
-                                    if (Number(data.totalIncomePerRangeAdv) === 0 && Number(data.totalExpensesPerRangeAdv) === 0) {
-                                        //display message
-                                        document.getElementById('Table_messages').style.display = 'block'
-                                        document.querySelector('.addRow').style.display = 'block'
-                                        document.querySelector('.fa-plus').style.display = 'inline'
-                                        document.querySelector('.noDataText').innerText = 'No Data To Display'
-                                        document.querySelector('.noDataText2').innerText = 'There are no cashflows in the selected time period'
-                                    }
-                                    else {
-                                        document.getElementById('Table_messages').style.display = 'none'
-                                    }
-                                    //get the value of the opening balance to be global
-                                    openingBalance = data.openingBalance
-                                    let formattedValue = null;
-                                    //GET THE CURRENCY SYMBOL
-                                    const checkCurrency = Array.from(newCurrencies).find((curr) => curr.BASE_CURRENCY === "Y");
-                                    const checkSymbol = Array.from(WorldCurrencies).find((curr) => (curr.Currency_Name).toLowerCase() === (checkCurrency.Currency_Name).toLowerCase());
-                                    if (checkSymbol) {
-                                        symbol = checkSymbol.ISO_Code
-                                    };
-                                    //THE OPENING BALANCE DISPLAYED
-                                    if (data.openingBalance < 0) {
-                                        //if the number is negative
-                                        const numberString = data.openingBalance.toString(); //convert to string so that you can use the split method
-                                        formattedValue = numberString.split("-")[1];
-                                        document.querySelector(".openingBalance").style.color = "red";
-                                        document.querySelector(".openingBalance").innerText = "-" + " " + baseCurrCode + Number(formattedValue).toFixed(2);
-                                    } else if (data.openingBalance >= 0) {
-                                        document.querySelector(".openingBalance").style.color = "black";
-                                        document.querySelector(".openingBalance").innerText = baseCurrCode + "    " + Number(data.openingBalance).toFixed(2); //place the cash Equiv value on the cashEquiv cell
-                                    }
+                                // From the server, the computation of the total income and expenses (as well as by filter) per range has been done
+                                //TOP GRANT TOTALS COMPUTATION
+                                itemsToProcess = []
+
+                                let cashBalance = 0
+                                totalUpdatePayins = data.totalIncomePerRangeAdv
+                                totalUpdatePayouts = data.totalExpensesPerRangeAdv
+                                if (advancedSearchInput !== null) {
+                                    totalPages = parseInt(data.advSearchedTotalPages)
+                                    cashFlowArray = data.advSearchedItemsToProcess
+                                    itemsToProcess = data.advSearchedItemsToProcess
+                                    cashBalance = Number((parseFloat(data.payInSearchedInputTotal) + parseFloat(data.openingBalance)) - parseFloat(data.payOutSearchedInputTotal)).toFixed(2);
+                                    await currentCashFlowTable(totalPages, page, pageSize, itemsToProcess)
+                                    //TOTAL PAYINs 'whether filtered by cat or not'
+                                    document.querySelector('.totalIncome').innerText = Number(data.payInSearchedInputTotal).toFixed(2);
+                                    //TOTAL PAYOUts 'whether filtered by cat or not'
+                                    document.querySelector(".totalExpenses").innerText = Number(data.payOutSearchedInputTotal).toFixed(2);
+                                }
+                                else if (advancedSearchInput === null) {
+                                    totalPages = parseInt(data.totalPages2)
+                                    cashFlowArray = data.itemsToProcess2
+                                    itemsToProcess = data.itemsToProcess2
+                                    cashBalance = Number((parseFloat(data.totalIncomePerRangeAdv) + parseFloat(data.openingBalance)) - parseFloat(data.totalExpensesPerRangeAdv)).toFixed(2);
+                                    await currentCashFlowTable(totalPages, page, pageSize, itemsToProcess)
                                     //TOTAL PAYINs 'whether filtered by cat or not'
                                     document.querySelector('.totalIncome').innerText = Number(data.totalIncomePerRangeAdv).toFixed(2);
                                     //TOTAL PAYOUts 'whether filtered by cat or not'
                                     document.querySelector(".totalExpenses").innerText = Number(data.totalExpensesPerRangeAdv).toFixed(2);
-                                    //update the totalpayins and outs variables that are global
-                                    totalPayInsRange = data.totalIncomePerRangeAdv
-                                    totalPayOutsRange = data.totalExpensesPerRangeAdv
-                                    //THE CLOSING BALANCE DISPLAYED
-                                    if (cashBalance < 0) {
-                                        //if the number is negative
-                                        const numberString = cashBalance.toString(); //convert to string so that you can use the split method
-                                        formattedValue = numberString.split("-")[1];
-                                        const updatedValue = "-" + " " + symbol + Number(formattedValue).toFixed(2);
-                                        document.querySelector(".CashBalance").innerText = updatedValue;
-                                        document.querySelector(".CashBalance").style.color = "red";
-                                    } else if (cashBalance >= 0) {
-                                        document.querySelector(".CashBalance").style.color = "black";
-                                        document.querySelector(".CashBalance").innerText = symbol + "    " + Number(cashBalance).toFixed(2); //place the cash Equiv value on the cashEquiv cell
-                                    }
+                                }
+                                //if the totals are equal to 0 of the generated range.dispay message that there is no items t display
+                                if (Number(data.totalIncomePerRangeAdv) === 0 && Number(data.totalExpensesPerRangeAdv) === 0) {
+                                    //display message
+                                    document.getElementById('Table_messages').style.display = 'block'
+                                    document.querySelector('.addRow').style.display = 'block'
+                                    document.querySelector('.fa-plus').style.display = 'inline'
+                                    document.querySelector('.noDataText').innerText = 'No Data To Display'
+                                    document.querySelector('.noDataText2').innerText = 'There are no cashflows in the selected time period'
+                                }
+                                else {
+                                    document.getElementById('Table_messages').style.display = 'none'
+                                }
+                                //get the value of the opening balance to be global
+                                openingBalance = data.openingBalance
+                                let formattedValue = null;
+                                //GET THE CURRENCY SYMBOL
+                                const checkCurrency = Array.from(newCurrencies).find((curr) => curr.BASE_CURRENCY === "Y");
+                                const checkSymbol = Array.from(WorldCurrencies).find((curr) => (curr.Currency_Name).toLowerCase() === (checkCurrency.Currency_Name).toLowerCase());
+                                if (checkSymbol) {
+                                    symbol = checkSymbol.ISO_Code
+                                };
+                                //THE OPENING BALANCE DISPLAYED
+                                if (data.openingBalance < 0) {
+                                    //if the number is negative
+                                    const numberString = data.openingBalance.toString(); //convert to string so that you can use the split method
+                                    formattedValue = numberString.split("-")[1];
+                                    document.querySelector(".openingBalance").style.color = "red";
+                                    document.querySelector(".openingBalance").innerText = "-" + " " + baseCurrCode + Number(formattedValue).toFixed(2);
+                                } else if (data.openingBalance >= 0) {
+                                    document.querySelector(".openingBalance").style.color = "black";
+                                    document.querySelector(".openingBalance").innerText = baseCurrCode + "    " + Number(data.openingBalance).toFixed(2); //place the cash Equiv value on the cashEquiv cell
+                                }
 
-
-
-                                })
+                                //update the totalpayins and outs variables that are global
+                                totalPayInsRange = data.totalIncomePerRangeAdv
+                                totalPayOutsRange = data.totalExpensesPerRangeAdv
+                                //THE CLOSING BALANCE DISPLAYED
+                                if (cashBalance < 0) {
+                                    //if the number is negative
+                                    const numberString = cashBalance.toString(); //convert to string so that you can use the split method
+                                    formattedValue = numberString.split("-")[1];
+                                    const updatedValue = "-" + " " + symbol + Number(formattedValue).toFixed(2);
+                                    document.querySelector(".CashBalance").innerText = updatedValue;
+                                    document.querySelector(".CashBalance").style.color = "red";
+                                } else if (cashBalance >= 0) {
+                                    document.querySelector(".CashBalance").style.color = "black";
+                                    document.querySelector(".CashBalance").innerText = symbol + "    " + Number(cashBalance).toFixed(2); //place the cash Equiv value on the cashEquiv cell
+                                }
+                            }
+                            catch (error) {
+                                console.error('Error fetching data:', error);
+                                removeSpinner();
+                                notification("Error fetching data. Please try again.");
+                            }
                         }
 
-                        function currentCashFlowTable(totalPages, page, pageSize, itemsToProcess) {
+                        async function currentCashFlowTable(totalPages, page, pageSize, itemsToProcess) {
                             removeSpinner()
                             defaultdisplayContainerBlocks()
                             const allTableRow = document.querySelectorAll('.shiftRowss')
@@ -1292,9 +1303,24 @@ fetch('/currencies')
                                 const tRow = allTableRow[a];
                                 tRow.style.display = 'none'
                             }
-                            const theDate = moment(startDate);//convert to the format dd/mm/yy using moment
-                            const expectedDateFormat = theDate.format('DD/MM/YYYY');
-                            if (startDate.getDate() === endDate.getDate() && startDate.getMonth() === endDate.getMonth() && startDate.getFullYear() === endDate.getFullYear()) {
+                            startDate = localStorage.getItem('firstDate')
+                            endDate = localStorage.getItem('lastDate')
+
+                            startDate = new Date(startDate)
+                            endDate = new Date(endDate)
+
+                            const momntStartDate1 = moment.tz(startDate, "Africa/Harare").startOf('day'); // Midnight in Zimbabwe
+                            const momntEndDate1 = moment.tz(endDate, "Africa/Harare").endOf('day'); // end of day  in Zimbabwe
+
+                            // Convert back to JavaScript Date objects (optional, only if needed)
+                            startDate = momntStartDate1.toDate();
+                            endDate = momntEndDate1.toDate();
+
+                            // Format the date as "DD/MM/YYYY"
+                            const expectedDateFormat = momntStartDate1.format('DD/MM/YYYY');
+
+                            // Check if startDate and endDate are the same day
+                            if (momntStartDate1.isSame(momntEndDate1, 'day')) {
                                 selectedDate = expectedDateFormat;
                             }
                             else {
@@ -1311,6 +1337,11 @@ fetch('/currencies')
                             }
                             else {
                                 document.getElementById('Table_messages').style.display = 'none'
+                                itemsToProcess.sort((a, b) => {
+                                    const [dayA, monthA, yearA] = a.CashFlowDate.split('/');
+                                    const [dayB, monthB, yearB] = b.CashFlowDate.split('/');
+                                    return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
+                                });
                                 for (let a = 0; a < itemsToProcess.length; a++) {
                                     const row = itemsToProcess[a];
                                     const date = row.CashFlowDate
@@ -1318,7 +1349,6 @@ fetch('/currencies')
                                     const formattedDate = dateParts[1] + "/" + dateParts[0] + "/" + dateParts[2];
                                     const formattedDates2 = new Date(formattedDate);
                                     const currName = Array.from(WorldCurrencies).find(curr => (curr.Currency_Name).toLowerCase() === (row.CashFlowCurrency).toLowerCase());//find matching currency name with the one in the incomes table
-
                                     if (currName) {
                                         newCurrCode = currName.ISO_Code;
                                     }
@@ -1331,7 +1361,11 @@ fetch('/currencies')
                                         baseCurrCode = baseCurrencyCode.ISO_Code;
 
                                     }
-                                    if (startDate.getTime() <= formattedDates2.getTime() && formattedDates2.getTime() <= endDate.getTime()) {//CODE FOR 
+
+                                    // Ensure formattedDates2 is also in Zimbabwe timezone
+                                    const formattedDates2Zim = moment.tz(formattedDates2, "Africa/Harare").startOf('day').toDate();
+                                    console.log(formattedDates2Zim)
+                                    if (startDate.getTime() <= formattedDates2Zim.getTime() && formattedDates2Zim.getTime() <= endDate.getTime()) {//CODE FOR 
                                         hasMatched = true
                                         // create a new row element
                                         const newEmptyRow = document.createElement('tr');
@@ -1389,6 +1423,12 @@ fetch('/currencies')
                                         typeText.setAttribute('data-bs-toggle', 'dropdown');
                                         typeText.setAttribute('aria-expanded', 'false');
                                         typeText.innerHTML = row.CashFlowType
+
+                                        const typeTextSpan = document.createElement("span");
+                                        typeTextSpan.classList.add("typeTextSpan");
+                                        typeTextSpan.hidden = true
+                                        typeTextSpan.innerText = row.CashFlowType
+
                                         // createDropdown menu and items
                                         const typeListDropdown = document.createElement('ul');
                                         typeListDropdown.classList.add('dropdown-menu');
@@ -1416,7 +1456,7 @@ fetch('/currencies')
                                         typeContainer.appendChild(typeText);
                                         typeContainer.appendChild(typeListDropdown);
                                         typeCell.appendChild(typeContainer);
-                                        // typeCell.appendChild(typeListDropdown);
+                                        typeCell.appendChild(typeTextSpan);
                                         newEmptyRow.appendChild(typeCell);
 
 
@@ -1719,17 +1759,23 @@ fetch('/currencies')
                                         amountCell.classList.add('amount-cell');
                                         const amountSpan = document.createElement('span');
                                         amountSpan.classList.add('expAmount');
+                                        const amountSpanBefore = document.createElement('span');
+                                        amountSpanBefore.classList.add('expAmountBefore');
+                                        amountSpanBefore.hidden = true;
                                         amountSpan.contentEditable = true;
+                                        amountSpanBefore.innerHTML = Number(row.CashFlowAmount).toFixed(2)
                                         amountSpan.innerHTML = Number(row.CashFlowAmount).toFixed(2)
                                         const symbolSpan1 = document.createElement('span');
                                         symbolSpan1.classList.add('symbol1');
                                         symbolSpan1.innerHTML = newCurrCode;
                                         amountCell.appendChild(symbolSpan1);
                                         amountCell.appendChild(amountSpan);
+                                        amountCell.appendChild(amountSpanBefore);
                                         newEmptyRow.appendChild(amountCell);
 
                                         const rateCell = document.createElement('td');
                                         rateCell.classList.add('rate-amount');
+
                                         const rateSpan1 = document.createElement('span');
                                         rateSpan1.classList.add('expRate');
                                         rateSpan1.innerHTML = Number(row.CashFlowRate).toFixed(2)
@@ -1750,8 +1796,15 @@ fetch('/currencies')
                                         cashEquivSpan.classList.add('Equivsymbol');
                                         cashEquivSpan.innerHTML = baseCurrCode
                                         cashEquivSpan1.innerHTML = Number(row.CashFlowCashEquiv).toFixed(2)
+
+                                        const cashEquivBefore = document.createElement('span');
+                                        cashEquivBefore.classList.add('cashEquivBefore');
+                                        cashEquivBefore.innerHTML = Number(row.CashFlowCashEquiv).toFixed(2)
+                                        cashEquivBefore.hidden = true;
+
                                         cashEquivCell.appendChild(cashEquivSpan)
                                         cashEquivCell.appendChild(cashEquivSpan1)
+                                        cashEquivCell.appendChild(cashEquivBefore)
                                         newEmptyRow.appendChild(cashEquivCell);
                                         const cashstatus = Array.from(headersStatus).find(name => name.HeaderName === 'CashEquiv');
                                         if ((cashstatus.isDisplayed === true)) {
@@ -2531,6 +2584,30 @@ fetch('/currencies')
                                     }
                                 }
                             });
+                            //================================================================================
+                            //function to call when updating data to run away fromfetching updted data from db,call this function with the only mpodified data and update the cashflow arra
+                            //call the function to create table
+                            function updateTableData(cashFlowArray) {
+
+                                // cashFlowArray = itemsToProcess
+                                pageSize = localStorage.getItem('advItemsPerPage');
+                                if (pageSize === null) {
+                                    pageSize = 5
+                                }
+                                else {
+                                    pageSize = pageSize
+                                }
+                                page = localStorage.getItem('advCurrentPage')// VARIABLE IN THE LOCAL STORAGE, IF THERE IS NON WE TAKE PAGE1
+                                //check if the page is empty or if the painfilter is not empty and that we are in the filtering mode
+                                if (page === null) {
+                                    page = 1
+                                }
+                                else {
+                                    page = page
+                                }
+                                console.log(totalPages, page, pageSize)
+                                currentCashFlowTable(totalPages, page, pageSize, cashFlowArray)
+                            }
                             //============================================================================================
                             function fixDate(date) {
                                 currentPage = 1
@@ -2599,42 +2676,137 @@ fetch('/currencies')
                                                 }
 
                                             }
+                                            // alert(document.querySelector('#dateRange').value)
                                             const parts = (cashFlowDate.innerText).split("/");
                                             const formattedDate = parts[1] + "/" + parts[0] + "/" + parts[2];
                                             const formattedDates2 = new Date(formattedDate);
-                                            startDate = new Date(formattedDates2);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                            endDate = new Date(formattedDates2);
+
+                                            // Set startDate to the beginning of the day
+                                            startDate = moment(formattedDates2).startOf('day').toDate();
+
+                                            // Set endDate to the end of the day
+                                            endDate = moment(formattedDates2).endOf('day').toDate();
+
+
                                             // remove the stored date range from local storage
                                             localStorage.removeItem('firstDate');
                                             localStorage.removeItem('lastDate');
                                             // Store the start and end date values in localStorage
                                             localStorage.setItem('firstDate', startDate);
                                             localStorage.setItem('lastDate', endDate);
+                                            // Function to update Date Range Picker dynamically
+                                            // Convert date from DD/MM/YYYY to a proper JavaScript Date
+                                            // const formattedDates3 = moment(cashFlowDate.innerText, "DD/MM/YYYY").toDate();
+                                            const formattedDates3 = moment.tz(cashFlowDate.innerText, "DD/MM/YYYY", "Africa/Harare").toDate();
+                                            // alert(formattedDates3)
+                                            // Update the Date Range Picker with the date entered in table
+                                            $('#dateRange').data('daterangepicker').setStartDate(formattedDates3);
+                                            $('#dateRange').data('daterangepicker').setEndDate(formattedDates3);
+
                                             // initializeDateRangePicker()
                                             notification("Updating....");
-                                            fetch('/updateCashFlowDate', {
-                                                method: 'POST',
-                                                headers: {
-                                                    'Content-Type': 'application/json'
-                                                },
-                                                body: JSON.stringify({
-                                                    rowId,
-                                                    newDate,
-                                                    sessionId
-                                                })
-                                            })
-                                                .then(response => response.json())
-                                                .then(data => {
-                                                    // Show alert
+                                            updateTableRows()
+                                            async function updateTableRows() {
+                                                try {
+                                                    pageSize = localStorage.getItem('advItemsPerPage');
+                                                    if (pageSize === null) {
+                                                        pageSize = 5
+                                                    }
+                                                    else {
+                                                        pageSize = pageSize
+                                                    }
+                                                    page = localStorage.getItem('advCurrentPage')// VARIABLE IN THE LOCAL STORAGE, IF THERE IS NON WE TAKE PAGE1
+                                                    //check if the page is empty or if the painfilter is not empty and that we are in the filtering mode
+                                                    if (page === null) {
+                                                        page = 1
+                                                    }
+                                                    else {
+                                                        page = page
+                                                    }
+                                                    const advancedSearchInput = localStorage.getItem('advSearchInput');
+
+                                                    const response = await fetch('/updateCashFlowDate', {
+                                                        method: 'POST',
+                                                        headers: {
+                                                            'Content-Type': 'application/json'
+                                                        },
+                                                        body: JSON.stringify({
+                                                            rowId,
+                                                            newDate,
+                                                            startDate: startDate,
+                                                            endDate: endDate,
+                                                            pageSize: pageSize,
+                                                            page: page,
+                                                            advancedSearchInput: advancedSearchInput,
+                                                            sessionId
+                                                        })
+                                                    })
+                                                    const data = await response.json();
+                                                    itemsToProcess = []
+
                                                     if (data.amUpdated === true) {
-                                                        const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                                        const eDate = localStorage.getItem('lastDate');
-                                                        const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                                        const endDate = new Date(eDate);
-                                                        defaultDisplayContent2(startDate, endDate);
+                                                        let cashBalance = 0
+                                                        totalUpdatePayins = data.advIncomeTotal
+                                                        totalUpdatePayouts = data.advExpenseTotal
+                                                        if (advancedSearchInput !== null) {
+                                                            totalPages = parseInt(data.searchedTotalPages)
+                                                            cashFlowArray = data.searchedItemsToProcess
+                                                            itemsToProcess = data.searchedItemsToProcess
+                                                            cashBalance = Number((parseFloat(data.advSearchedpayinTotal) + parseFloat(openingBalance)) - parseFloat(data.advSearchedpayoutTotal)).toFixed(2);
+                                                            currentCashFlowTable(totalPages, page, pageSize, itemsToProcess)
+                                                            //TOTAL PAYINs 'whether filtered by cat or not'
+                                                            document.querySelector('.totalIncome').innerText = Number(data.advSearchedpayinTotal).toFixed(2);
+                                                            //TOTAL PAYOUts 'whether filtered by cat or not'
+                                                            document.querySelector(".totalExpenses").innerText = Number(data.advSearchedpayoutTotal).toFixed(2);
+                                                        }
+                                                        else if (advancedSearchInput === null) {
+                                                            totalPages = parseInt(data.totalPages)
+                                                            cashFlowArray = data.itemsToProcess
+                                                            itemsToProcess = data.itemsToProcess
+                                                            cashBalance = Number((parseFloat(data.advIncomeTotal) + parseFloat(openingBalance)) - parseFloat(data.advExpenseTotal)).toFixed(2);
+                                                            currentCashFlowTable(totalPages, page, pageSize, itemsToProcess)
+                                                            //TOTAL PAYINs 'whether filtered by cat or not'
+                                                            document.querySelector('.totalIncome').innerText = Number(data.advIncomeTotal).toFixed(2);
+                                                            //TOTAL PAYOUts 'whether filtered by cat or not'
+                                                            document.querySelector(".totalExpenses").innerText = Number(data.advExpenseTotal).toFixed(2);
+                                                        }
+                                                        //if the totals are equal to 0 of the generated range.dispay message that there is no items t display
+                                                        if ((Number(data.advIncomeTotal) === 0 && Number(data.advExpenseTotal) === 0)) {
+                                                            //display message
+                                                            document.getElementById('Table_messages').style.display = 'block'
+                                                            document.querySelector('.addRow').style.display = 'block'
+                                                            document.querySelector('.fa-plus').style.display = 'inline'
+                                                            document.querySelector('.noDataText').innerText = 'No Data To Display'
+                                                            document.querySelector('.noDataText2').innerText = 'There are no cashflows in the selected time period'
+                                                        }
+                                                        else {
+                                                            document.getElementById('Table_messages').style.display = 'none'
+                                                        }
+
+                                                        let formattedValue = null;
+                                                        //GET THE CURRENCY SYMBOL
+                                                        const checkCurrency = Array.from(newCurrencies).find((curr) => curr.BASE_CURRENCY === "Y");
+                                                        const checkSymbol = Array.from(WorldCurrencies).find((curr) => (curr.Currency_Name).toLowerCase() === (checkCurrency.Currency_Name).toLowerCase());
+                                                        if (checkSymbol) {
+                                                            symbol = checkSymbol.ISO_Code
+                                                        };
+
+
+                                                        //CALCULATE THE CASH BALANCE
+                                                        //THE CLOSING BALANCE DISPLAYED
+                                                        if (cashBalance < 0) {
+                                                            //if the number is negative
+                                                            const numberString = cashBalance.toString(); //convert to string so that you can use the split method
+                                                            formattedValue = numberString.split("-")[1];
+                                                            const updatedValue = "-" + " " + symbol + Number(formattedValue).toFixed(2);
+                                                            document.querySelector(".CashBalance").innerText = updatedValue;
+                                                            document.querySelector(".CashBalance").style.color = "red";
+                                                        } else if (cashBalance >= 0) {
+                                                            document.querySelector(".CashBalance").style.color = "black";
+                                                            document.querySelector(".CashBalance").innerText = symbol + "    " + Number(cashBalance).toFixed(2); //place the cash Equiv value on the cashEquiv cell
+                                                        }
+
                                                         notification('Updated')
-
-
                                                     }
                                                     else {
                                                         let message = ''
@@ -2647,21 +2819,15 @@ fetch('/currencies')
                                                         }
 
                                                         notification(message);
-                                                        const sDate =
-                                                            localStorage.getItem("firstDate"); //DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                                        const eDate =
-                                                            localStorage.getItem("lastDate");
-                                                        const startDate = new Date(sDate); //ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                                        const endDate = new Date(eDate);
-                                                        defaultDisplayContent2(startDate, endDate);
+                                                        currentCashFlowTable(totalPages, page, pageSize, itemsToProcess)
 
                                                     }
-
-                                                })
-                                                .catch(error => {
+                                                }
+                                                catch (error) {
                                                     console.error(`Error updating Date field for expense ID: ${rowId}`, error);
-                                                });
-                                            return
+                                                }
+                                                return
+                                            }
                                         }
                                     }
                                 }
@@ -2890,29 +3056,8 @@ fetch('/currencies')
 
 
                                         }
-                                        spinner.style.display = 'block';
                                         newEmptyRow.querySelector('.categorySpan').innerText = 'suspense'
                                         newEmptyRow.querySelector('.typeSpan').innerText = type.innerText //ita what has been selected pa ttpe dropdown zvipinde mu TD
-                                        document.querySelector('.totalExpenses').innerText = Number(totalPayOutsRange).toFixed(2);
-                                        document.querySelector('.totalIncome').innerText = Number(totalPayInsRange).toFixed(2);
-                                        const selectedCurrency = Array.from(newCurrencies).find(newCurr => newCurr.BASE_CURRENCY === 'Y');
-                                        baseCurrCode = selectedCurrency.Currency_Name
-
-                                        const cashBalance = parseFloat(totalPayInsRange) + parseFloat(openingBalance) - parseFloat(totalPayOutsRange)
-                                        if (cashBalance < 0) {//if the number is negative
-                                            const numberString = cashBalance.toString();//convert to string so that you can use the split method
-                                            formattedValue = numberString.split('-')[1]
-                                            sign = -1
-                                            if (sign === -1) {
-                                                document.querySelector('.CashBalance').style.color = 'red';
-                                                const updatedValue = '-' + baseCurrCode + Number(formattedValue).toFixed(2);
-                                                newEmptyRow.querySelector('.runningBalance').innerText = updatedValue
-                                            }
-                                        }
-                                        else if (cashBalance >= 0) {
-                                            document.querySelector('.CashBalance').style.color = 'black';
-                                            document.querySelector('.CashBalance').innerText = baseCurrCode + '  ' + Number(cashBalance).toFixed(2);;//place the cash Equiv value on the cashEquiv cell
-                                        }
                                         const typeSelected = type.innerText
 
                                         //endesa ku database the result
@@ -2933,8 +3078,58 @@ fetch('/currencies')
                                                 // Show alert
                                                 if (data.amUpdated === true) {
                                                     notification('Updated')
-                                                    spinner.style.display = 'none'
-                                                    defaultDisplayContent2(startDate, endDate)
+                                                    let updatedDoc = data.document
+                                                    const index = cashFlowArray.findIndex(record => record._id === updatedDoc._id);
+                                                    if (index !== -1) {
+                                                        cashFlowArray[index] = updatedDoc;
+                                                    }
+                                                    //UPDATE THE totals
+
+                                                    let oldType = newEmptyRow.querySelector('.typeTextSpan').innerText
+                                                    //get the selected type before the change
+                                                    //if before selected type is payin and the now is payout do something else vice versa
+                                                    let newCashEquiv = 0
+
+                                                    if (oldType !== updatedDoc.CashFlowType && oldType === 'Pay in') {
+                                                        newCashEquiv = Number(updatedDoc.CashFlowCashEquiv);
+                                                        totalUpdatePayouts += newCashEquiv; // Adjust payout total
+                                                        totalUpdatePayins -= newCashEquiv; // Adjust pay-in total
+                                                    } else if (oldType !== updatedDoc.CashFlowType && oldType === 'Payout') {
+                                                        newCashEquiv = Number(updatedDoc.CashFlowCashEquiv);
+                                                        totalUpdatePayins += newCashEquiv; // Adjust pay-in total
+                                                        totalUpdatePayouts -= newCashEquiv; // Adjust payout total
+                                                    }
+
+                                                    // Update the totalPayOutsRange and totalPayInsRange
+
+                                                    let formattedValue = null;
+                                                    //GET THE CURRENCY SYMBOL
+                                                    const checkCurrency = Array.from(newCurrencies).find((curr) => curr.BASE_CURRENCY === "Y");
+                                                    const checkSymbol = Array.from(WorldCurrencies).find((curr) => (curr.Currency_Name).toLowerCase() === (checkCurrency.Currency_Name).toLowerCase());
+                                                    if (checkSymbol) {
+                                                        symbol = checkSymbol.ISO_Code
+                                                    };
+
+                                                    //TOTAL PAYINs 'whether filtered by cat or not'
+                                                    document.querySelector('.totalIncome').innerText = Number(totalUpdatePayins).toFixed(2);
+                                                    //TOTAL PAYOUts 'whether filtered by cat or not'
+                                                    document.querySelector(".totalExpenses").innerText = Number(totalUpdatePayouts).toFixed(2);
+                                                    //CALCULATE THE CASH BALANCE
+                                                    const cashBalance = (parseFloat(totalUpdatePayins) + parseFloat(openingBalance)) - parseFloat(totalUpdatePayouts)
+                                                    //THE CLOSING BALANCE DISPLAYED
+                                                    if (cashBalance < 0) {
+                                                        //if the number is negative
+                                                        const numberString = cashBalance.toString(); //convert to string so that you can use the split method
+                                                        formattedValue = numberString.split("-")[1];
+                                                        const updatedValue = "-" + " " + symbol + Number(formattedValue).toFixed(2);
+                                                        document.querySelector(".CashBalance").innerText = updatedValue;
+                                                        document.querySelector(".CashBalance").style.color = "red";
+                                                    } else if (cashBalance >= 0) {
+                                                        document.querySelector(".CashBalance").style.color = "black";
+                                                        document.querySelector(".CashBalance").innerText = symbol + "    " + Number(cashBalance).toFixed(2); //place the cash Equiv value on the cashEquiv cell
+                                                    }
+                                                    //update the cashflow array and update also the table
+                                                    updateTableData(cashFlowArray)
                                                 }
                                                 else {
                                                     let message = ''
@@ -2947,8 +3142,8 @@ fetch('/currencies')
                                                     }
 
                                                     notification(message);
-                                                    spinner.style.display = 'none'
-                                                    defaultDisplayContent2(startDate, endDate)
+                                                    //update the cashflow array and update also the table
+                                                    updateTableData(cashFlowArray)
                                                 }
 
                                             })
@@ -3441,13 +3636,15 @@ fetch('/currencies')
                                     .then((data) => {
                                         // Show alert
                                         if (data.amUpdated === true) {
-                                            // vatBtn.checked = true
-                                            const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                            const eDate = localStorage.getItem('lastDate');
-                                            const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                            const endDate = new Date(eDate);
-                                            defaultDisplayContent2(startDate, endDate)
                                             notification("Updated");
+                                            //update the cashflow array and update also the table
+                                            let document = data.document
+                                            const index = cashFlowArray.findIndex(record => record._id === document._id);
+                                            if (index !== -1) {
+                                                cashFlowArray[index].Tax.vat = document.Tax.vat;
+                                            }
+                                            //update the cashflow array and update also the table
+                                            updateTableData(cashFlowArray)
                                         }
                                         else {
                                             let message = ''
@@ -3460,11 +3657,8 @@ fetch('/currencies')
                                             }
 
                                             notification(message);
-                                            const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                            const eDate = localStorage.getItem('lastDate');
-                                            const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                            const endDate = new Date(eDate);
-                                            defaultDisplayContent2(startDate, endDate);
+                                            //update the cashflow array and update also the table
+                                            updateTableData(cashFlowArray)
 
                                         }
                                     })
@@ -3528,8 +3722,13 @@ fetch('/currencies')
                                                 // Show alert
                                                 if (data.amUpdated === true) {
                                                     notification('Updated')
-                                                    spinner.style.display = 'none'
-                                                    // defaultDisplayContent2(startDate, endDate)
+                                                    let document = data.document
+                                                    const index = cashFlowArray.findIndex(record => record._id === document._id);
+                                                    if (index !== -1) {
+                                                        cashFlowArray[index] = document;
+                                                    }
+                                                    //update the cashflow array and update also the table
+                                                    updateTableData(cashFlowArray)
                                                 }
                                                 else {
                                                     let message = ''
@@ -3542,11 +3741,8 @@ fetch('/currencies')
                                                     }
 
                                                     notification(message);
-                                                    const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                                    const eDate = localStorage.getItem('lastDate');
-                                                    const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                                    const endDate = new Date(eDate);
-                                                    defaultDisplayContent2(startDate, endDate);
+                                                    //update the cashflow array and update also the table
+                                                    updateTableData(cashFlowArray)
 
                                                 }
 
@@ -3561,30 +3757,35 @@ fetch('/currencies')
                             // };
                             //================================================================================================
                             function displayCategoryForm() {
-
-                                // const catDropdown = newEmptyRow.querySelector('.catDropdownContainer')
-                                const catDropdown = newEmptyRow.querySelector('#dropdownForm')
+                                // Select the category dropdown form
+                                const catDropdown = newEmptyRow.querySelector('#dropdownForm');
                                 const catButton = newEmptyRow.querySelector('.categorySpan');
                                 const menuHeight = catDropdown.offsetHeight;
                                 const dropdownRect = catButton.getBoundingClientRect();
-                                // Set form position based on the clicked row
-                                catDropdown.style.transition = 'transform 0.3s ease;' /* Smooth transition */
-                                //the form's position is calculated based on the clicked row's bounding rectangle so that we are able to apply 
-                                if (window.innerHeight - dropdownRect.bottom < menuHeight) {
-                                    catDropdown.style.top = `${dropdownRect.top - menuHeight}px`
-                                    catDropdown.classList.add('dropup');
 
+                                // Set form position based on the clicked row
+                                catDropdown.style.transition = 'transform 0.3s ease'; /* Smooth transition */
+                                // Calculate the form's position based on the clicked row's bounding rectangle
+                                if (window.innerHeight - dropdownRect.bottom < menuHeight) {
+                                    catDropdown.style.top = `${dropdownRect.top - menuHeight}px`;
+                                    catDropdown.classList.add('dropup');
                                 } else {
                                     catDropdown.classList.remove('dropup');
                                 }
+
                                 // Show the selected form
                                 catDropdown.style.display = 'block';
 
-                                let insertedCategoryName = newEmptyRow.querySelector(`.categoryNameClass`)
-                                // //gara wias a focus in the input field
-                                insertedCategoryName.focus()
-                                //limit the words length to 25
-                                insertedCategoryName.maxLength = 25
+                                // Select the inserted category name input field
+                                let insertedCategoryName = newEmptyRow.querySelector('.categoryNameClass');
+                                if (insertedCategoryName) {
+                                    // Set focus on the input field
+                                    insertedCategoryName.focus();
+                                    // Limit the words length to 25
+                                    insertedCategoryName.maxLength = 25;
+                                } else {
+                                    console.error("Category name input field not found!");
+                                }
                             }
                             function createNewCategory() {
                                 let insertedCategoryName = newEmptyRow.querySelector(`.categoryNameClass`)
@@ -3637,10 +3838,10 @@ fetch('/currencies')
                                     const balanceValue = 'PayIn'
                                     insertCategoryRecord(categoryToDb, sessionId)
                                     newEmptyRow.querySelector('#dropdownForm').style.display = 'none'; // Create a new dropdown instance
-                                    const dropdownMenu = new bootstrap.Dropdown(newEmptyRow.querySelector('.currbtnSpan')); // Create a new dropdown instance
-                                    dropdownMenu.toggle(); // Toggle the dropdown
-                                    const dropdownMenu2 = new bootstrap.Dropdown(newEmptyRow.querySelector('.categorySpan')); // Create a new dropdown instance
-                                    dropdownMenu2.hide();//close category dropdwn menu
+                                    // const dropdownMenu = new bootstrap.Dropdown(newEmptyRow.querySelector('.currbtnSpan')); // Create a new dropdown instance
+                                    // dropdownMenu.toggle(); // Toggle the dropdown
+                                    // const dropdownMenu2 = new bootstrap.Dropdown(newEmptyRow.querySelector('.categorySpan')); // Create a new dropdown instance
+                                    // dropdownMenu2.hide();//close category dropdwn menu
                                     // notification('Added')
                                     if (rowId !== '') {
                                         const newCategory = insertedCategoryName.value
@@ -3649,23 +3850,11 @@ fetch('/currencies')
                                     }
                                 }
                                 newEmptyRow.querySelector('#dropdownForm').style.display = 'none'; // Create a new dropdown instance
-                                const dropdownMenu = new bootstrap.Dropdown(newEmptyRow.querySelector('.currbtnSpan')); // Create a new dropdown instance
-                                dropdownMenu.toggle(); // Toggle the dropdown
-                                const dropdownMenu2 = new bootstrap.Dropdown(newEmptyRow.querySelector('.categorySpan')); // Create a new dropdown instance
-                                dropdownMenu2.hide();//close category dropdwn menu
-                            }
-                            const payOutSubmitButton = newEmptyRow.querySelector(`.submitCat`)
-                            //on click of the add button send data to database
-                            payOutSubmitButton.addEventListener("click", (event) => {
-                                event.preventDefault();
-
-                                // Perform your action (e.g., sending data to the database)
-                                createNewCategory();
-
                                 // Close the category dropdown
                                 const categoryDropdownElement = newEmptyRow.querySelector('.categorySpan');
                                 if (categoryDropdownElement) {
                                     const categoryDropdown = new bootstrap.Dropdown(categoryDropdownElement);
+                                    console.log("Closing category dropdown");
                                     categoryDropdown.hide(); // Close the category dropdown
                                 } else {
                                     console.error("Category dropdown element not found!");
@@ -3675,10 +3864,18 @@ fetch('/currencies')
                                 const currencyDropdownButton = newEmptyRow.querySelector('.currbtnSpan');
                                 if (currencyDropdownButton) {
                                     const currencyDropdown = new bootstrap.Dropdown(currencyDropdownButton);
+                                    console.log("Opening currency dropdown");
                                     currencyDropdown.toggle(); // Open the currency dropdown
                                 } else {
                                     console.error("Currency dropdown button not found!");
                                 }
+                            }
+                            const payOutSubmitButton = newEmptyRow.querySelector(`.submitCat`)
+                            //on click of the add button send data to database
+                            payOutSubmitButton.addEventListener("click", (event) => {
+                                event.preventDefault();
+                                createNewCategory()
+
                             });
                             //if the key pressed is enter , add the event on the category cell
                             newEmptyRow.querySelector('.categories-cell').addEventListener("keydown", (event) => {
@@ -3821,8 +4018,13 @@ fetch('/currencies')
                                                 // Show alert
                                                 if (data.amUpdated === true) {
                                                     notification('Updated')
-                                                    spinner.style.display = 'none'
-                                                    // defaultDisplayContent2(startDate, endDate)
+                                                    let document = data.document
+                                                    const index = cashFlowArray.findIndex(record => record._id === document._id);
+                                                    if (index !== -1) {
+                                                        cashFlowArray[index] = document;
+                                                    }
+                                                    //update the cashflow array and update also the table
+                                                    updateTableData(cashFlowArray)
                                                 } else {
                                                     let message = ''
                                                     if (data.amUpdated === false) {
@@ -3834,11 +4036,8 @@ fetch('/currencies')
                                                     }
 
                                                     notification(message);
-                                                    const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                                    const eDate = localStorage.getItem('lastDate');
-                                                    const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                                    const endDate = new Date(eDate);
-                                                    defaultDisplayContent2(startDate, endDate);
+                                                    //update the cashflow array and update also the table
+                                                    updateTableData(cashFlowArray)
 
                                                 }
 
@@ -3888,14 +4087,7 @@ fetch('/currencies')
                                 categoryOption.addEventListener("click", function (event) {
                                     event.preventDefault();
                                     categoryToDatabase(event, i, categoryOption)
-                                    // Open the currency dropdown
-                                    const currencyDropdownButton = newEmptyRow.querySelector('.currbtnSpan');
-                                    if (currencyDropdownButton) {
-                                        const currencyDropdown = new bootstrap.Dropdown(currencyDropdownButton);
-                                        currencyDropdown.toggle(); // Open the currency dropdown
-                                    } else {
-                                        console.log("Currency dropdown button not found!");
-                                    }
+
                                 });
                             });
 
@@ -3904,8 +4096,6 @@ fetch('/currencies')
                                     if (event.key === "Enter") {
                                         event.preventDefault();
                                         categoryToDatabase(event, i, categoryOption)
-                                        const dropdownMenu = new bootstrap.Dropdown(newEmptyRow.querySelector('.currbtnSpan')); // Create a new dropdown instance
-                                        dropdownMenu.toggle(); // Toggle the dropdown
 
                                     }
                                 })
@@ -3914,14 +4104,7 @@ fetch('/currencies')
                                 categoryOption.addEventListener("click", function (event) {
                                     event.preventDefault();
                                     categoryToDatabase(event, i, categoryOption)
-                                    // Open the currency dropdown
-                                    const currencyDropdownButton = newEmptyRow.querySelector('.currbtnSpan');
-                                    if (currencyDropdownButton) {
-                                        const currencyDropdown = new bootstrap.Dropdown(currencyDropdownButton);
-                                        currencyDropdown.toggle(); // Open the currency dropdown
-                                    } else {
-                                        console.error("Currency dropdown button not found!");
-                                    }
+
                                 });
                             });
                             incomeOptions.forEach((categoryOption, i) => {
@@ -3929,8 +4112,7 @@ fetch('/currencies')
                                     if (event.key === "Enter") {
                                         event.preventDefault();
                                         categoryToDatabase(event, i, categoryOption)
-                                        const dropdownMenu = new bootstrap.Dropdown(newEmptyRow.querySelector('.currbtnSpan')); // Create a new dropdown instance
-                                        dropdownMenu.toggle(); // Toggle the dropdown
+
                                     }
                                 })
                             })
@@ -3952,9 +4134,15 @@ fetch('/currencies')
                                     .then((data) => {
                                         // Show alert
                                         if (data.amUpdated === true) {
-                                            // defaultDisplayContent2(startDate, endDate)
-                                            spinner.style.display = "none";
+
                                             notification("Updated");
+                                            let document = data.document
+                                            const index = cashFlowArray.findIndex(record => record._id === document._id);
+                                            if (index !== -1) {
+                                                cashFlowArray[index] = document;
+                                            }
+                                            //update the cashflow array and update also the table
+                                            updateTableData(cashFlowArray)
                                         }
                                         else {
                                             let message = ''
@@ -3967,11 +4155,8 @@ fetch('/currencies')
                                             }
 
                                             notification(message);
-                                            const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                            const eDate = localStorage.getItem('lastDate');
-                                            const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                            const endDate = new Date(eDate);
-                                            defaultDisplayContent2(startDate, endDate);
+                                            //update the cashflow array and update also the table
+                                            updateTableData(cashFlowArray)
 
                                         }
                                     })
@@ -4104,8 +4289,13 @@ fetch('/currencies')
                                         // Show alert
                                         if (data.amUpdated === true) {
                                             notification('Updated')
-                                            spinner.style.display = 'none'
-                                            // defaultDisplayContent2(startDate, endDate)
+                                            let document = data.document
+                                            const index = cashFlowArray.findIndex(record => record._id === document._id);
+                                            if (index !== -1) {
+                                                cashFlowArray[index] = document;
+                                            }
+                                            //update the cashflow array and update also the table
+                                            updateTableData(cashFlowArray)
                                         }
                                         else {
                                             let message = ''
@@ -4118,11 +4308,8 @@ fetch('/currencies')
                                             }
 
                                             notification(message);
-                                            const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                            const eDate = localStorage.getItem('lastDate');
-                                            const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                            const endDate = new Date(eDate);
-                                            defaultDisplayContent2(startDate, endDate);
+                                            //update the cashflow array and update also the table
+                                            updateTableData(cashFlowArray)
 
                                         }
 
@@ -4224,8 +4411,54 @@ fetch('/currencies')
                                                         // Show alert
                                                         if (data.amUpdated === true) {
                                                             notification('Updated')
-                                                            spinner.style.display = 'none'
-                                                            // defaultDisplayContent2(startDate, endDate)
+                                                            let updatedDoc = data.document
+                                                            const index = cashFlowArray.findIndex(record => record._id === updatedDoc._id);
+                                                            if (index !== -1) {
+                                                                cashFlowArray[index] = updatedDoc;
+                                                            }
+                                                            let oldAmount = Number(newEmptyRow.querySelector(".expAmountBefore").innerText); // Old amount before update
+                                                            let newAmount = 0; // New updated amount
+                                                            let difference = 0; // Calculate change
+
+                                                            if (updatedDoc.CashFlowType === "Pay in") {
+                                                                newAmount = Number(updatedDoc.CashFlowCashEquiv)
+                                                                difference = newAmount - oldAmount
+                                                                totalUpdatePayins += difference; // Adjust pay-in total
+                                                            } else if (updatedDoc.CashFlowType === "Payout") {
+                                                                newAmount = Number(updatedDoc.CashFlowCashEquiv)
+                                                                difference = newAmount - oldAmount
+                                                                totalUpdatePayouts += difference; // Adjust payout total
+                                                            }
+                                                            // Update the totalPayOutsRange and totalPayInsRange
+
+                                                            let formattedValue = null;
+                                                            //GET THE CURRENCY SYMBOL
+                                                            const checkCurrency = Array.from(newCurrencies).find((curr) => curr.BASE_CURRENCY === "Y");
+                                                            const checkSymbol = Array.from(WorldCurrencies).find((curr) => (curr.Currency_Name).toLowerCase() === (checkCurrency.Currency_Name).toLowerCase());
+                                                            if (checkSymbol) {
+                                                                symbol = checkSymbol.ISO_Code
+                                                            };
+
+                                                            //TOTAL PAYINs 'whether filtered by cat or not'
+                                                            document.querySelector('.totalIncome').innerText = Number(totalUpdatePayins).toFixed(2);
+                                                            //TOTAL PAYOUts 'whether filtered by cat or not'
+                                                            document.querySelector(".totalExpenses").innerText = Number(totalUpdatePayouts).toFixed(2);
+                                                            //CALCULATE THE CASH BALANCE
+                                                            const cashBalance = (parseFloat(totalUpdatePayins) + parseFloat(openingBalance)) - parseFloat(totalUpdatePayouts)
+                                                            //THE CLOSING BALANCE DISPLAYED
+                                                            if (cashBalance < 0) {
+                                                                //if the number is negative
+                                                                const numberString = cashBalance.toString(); //convert to string so that you can use the split method
+                                                                formattedValue = numberString.split("-")[1];
+                                                                const updatedValue = "-" + " " + symbol + Number(formattedValue).toFixed(2);
+                                                                document.querySelector(".CashBalance").innerText = updatedValue;
+                                                                document.querySelector(".CashBalance").style.color = "red";
+                                                            } else if (cashBalance >= 0) {
+                                                                document.querySelector(".CashBalance").style.color = "black";
+                                                                document.querySelector(".CashBalance").innerText = symbol + "    " + Number(cashBalance).toFixed(2); //place the cash Equiv value on the cashEquiv cell
+                                                            }
+                                                            //update the cashflow array and update also the table
+                                                            updateTableData(cashFlowArray)
                                                         }
                                                         else {
                                                             let message = ''
@@ -4238,17 +4471,15 @@ fetch('/currencies')
                                                             }
 
                                                             notification(message);
-                                                            const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                                            const eDate = localStorage.getItem('lastDate');
-                                                            const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                                            const endDate = new Date(eDate);
-                                                            defaultDisplayContent2(startDate, endDate);
+                                                            updateTableData(cashFlowArray)
 
                                                         }
 
                                                     })
                                                     .catch(error => {
                                                         console.error(`Error updating base amount field for expense ID: ${rowId}`, error);
+                                                        // notification('Failed to update.Please try again');
+                                                        updateTableData(cashFlowArray)
                                                     });
                                             }
                                         }
@@ -4410,6 +4641,122 @@ fetch('/currencies')
                                     }
                                 })
                             }
+                            //FUNCTION TO CALL WHEN SAVING NEW RECORD
+                            async function saveCashFlowRecord(itemsToProcess, sessionId) {
+                                //THEN LET THE SERVER STORE IT IN THE DATABASE
+                                // displaySpinner()
+                                notification("Saving Data.....");
+                                try {
+                                    const response = await fetch('/saveCashflow', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify({
+                                            itemsToProcess,
+                                            sessionId
+                                        })
+                                    });
+
+                                    const data = await response.json();
+                                    if (data.isSaving === true) {
+                                        let dbDocs = data.documents //array from db
+                                        cashFlowArray.push(...dbDocs)//line uses the spread operator (...) to push all elements from the dbDocs array into the cashFlowArray. 
+                                        // This operation effectively merges the contents of dbDocs into cashFlowArray, adding each document from the database to the existing array of cash flow records.
+                                        // Iterate over each document in dbDocs to access CashFlowType
+                                        dbDocs.forEach(doc => {
+                                            let newCashEquiv = 0;
+                                            // get the cash equivalent of the added document and update the totals
+                                            if (doc.CashFlowType === "Pay in") {
+                                                newCashEquiv = Number(doc.CashFlowCashEquiv);
+                                                totalUpdatePayins += newCashEquiv; // Adjust pay-in total
+                                            } else if (doc.CashFlowType === "Payout") {
+                                                newCashEquiv = Number(doc.CashFlowCashEquiv);
+                                                totalUpdatePayouts += newCashEquiv; // Adjust payout total
+                                            }
+                                        });
+                                        //TOTAL PAYINs 'whether filtered by cat or not'
+                                        document.querySelector('.totalIncome').innerText = Number(totalUpdatePayins).toFixed(2);
+                                        //TOTAL PAYOUts 'whether filtered by cat or not'
+                                        document.querySelector(".totalExpenses").innerText = Number(totalUpdatePayouts).toFixed(2);
+                                        //CALCULATE THE CASH BALANCE
+                                        const cashBalance = (parseFloat(totalUpdatePayins) + parseFloat(openingBalance)) - parseFloat(totalUpdatePayouts)
+                                        //THE CLOSING BALANCE DISPLAYED
+                                        if (cashBalance < 0) {
+                                            //if the number is negative
+                                            const numberString = cashBalance.toString(); //convert to string so that you can use the split method
+                                            formattedValue = numberString.split("-")[1];
+                                            const updatedValue = "-" + " " + symbol + Number(formattedValue).toFixed(2);
+                                            document.querySelector(".CashBalance").innerText = updatedValue;
+                                            document.querySelector(".CashBalance").style.color = "red";
+                                        } else if (cashBalance >= 0) {
+                                            document.querySelector(".CashBalance").style.color = "black";
+                                            document.querySelector(".CashBalance").innerText = symbol + "    " + Number(cashBalance).toFixed(2); //place the cash Equiv value on the cashEquiv cell
+                                        }
+                                        //get the data recored for that period selected
+                                        let cashFlowsForThatDay = []
+                                        const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                        const eDate = localStorage.getItem('lastDate');
+                                        const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                        const endDate = new Date(eDate);
+                                        for (let i = 0; i < data.allDocuments.length; i++) {
+                                            const row = data.allDocuments[i];
+                                            const expDate = row.CashFlowDate;
+                                            const parts = expDate.split("/");
+                                            const formattedDate =
+                                                parts[1] + "/" + parts[0] + "/" + parts[2];
+                                            const formattedDates2 = new Date(formattedDate);
+                                            if (startDate.getTime() <= formattedDates2.getTime() && formattedDates2.getTime() <= endDate.getTime()) {
+                                                //STORE IN AN ARRAY 
+                                                cashFlowsForThatDay.push(row)
+                                            }
+                                        }
+                                        const itemsFromLS = localStorage.getItem('advItemsPerPage');
+                                        if (itemsFromLS === null) {
+
+                                            advItemsPerPage = 5
+                                        }
+                                        else if (itemsFromLS !== null) {
+                                            advItemsPerPage = itemsFromLS
+                                        }
+
+                                        cashFlowsForThatDay.sort((a, b) => {
+                                            const [dayA, monthA, yearA] = a.CashFlowDate.split('/');
+                                            const [dayB, monthB, yearB] = b.CashFlowDate.split('/');
+                                            return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
+                                        });
+                                        notification("Saved");
+
+                                        const totalPages = Math.ceil(cashFlowsForThatDay.length / advItemsPerPage); // 7
+                                        if (cashFlowsForThatDay.length > advItemsPerPage) {
+                                            currentPage = Math.ceil(cashFlowsForThatDay.length / advItemsPerPage)
+
+                                        } else if (cashFlowsForThatDay.length < advItemsPerPage) {
+                                            currentPage = 1
+                                        }
+                                        if (currentPage > totalPages) {
+                                            currentPage = totalPages;
+                                        }
+                                        const startIndex = (parseInt(currentPage) - 1) * parseInt(advItemsPerPage);
+                                        const endIndex = startIndex + parseInt(advItemsPerPage);
+                                        const itemsToProcess = cashFlowsForThatDay.slice(startIndex, endIndex);
+                                        localStorage.setItem('advCurrentPage', currentPage)
+                                        //update the cashflow array and update also the table
+                                        currentCashFlowTable(totalPages, currentPage, advItemsPerPage, itemsToProcess)
+
+                                    } else {
+                                        // Error saving data
+                                        //update the cashflow array and update also the table
+                                        updateTableData(cashFlowArray)
+                                        displayContainerBlocks()
+                                        notification("Not Saved..Please try again");
+
+                                    }
+                                } catch (error) {
+                                    console.error('Error saving data:', error);
+                                    notification("Error saving data. Please try again.");
+                                }
+                            }
                             //==========================================================================================================
                             //LISTENER FOR RATE CELL
                             const cashFlowRate = newEmptyRow.querySelector('.expRate');
@@ -4438,14 +4785,15 @@ fetch('/currencies')
                                     event.preventDefault();
                                     if (rowId !== '') {
                                         // get the new value of the expense rate from the edited cell
-                                        const newCashFlowRate = event.target.innerText;
-                                        if (newCashFlowRate === '') {
+                                        let newCashFlowRate = 0
+
+                                        if (event.target.innerText === '') {
                                             notification('Field Can not Be Empty')
                                             cashFlowRate.focus(); // Remove focus from amount cell
                                             return
                                         }
                                         else {
-
+                                            newCashFlowRate = Number(event.target.innerText);
                                             const exId = Array.from(cashFlowArray).find(ex => ex._id === rowId);//find the id equal to the expenseId
                                             //so that we can access any items with that id(e.g-exId.ExpenseAmount)
                                             const currencies = Array.from(newCurrencies).find(newCurrency => newCurrency.BASE_CURRENCY === 'Y');//find the base currency
@@ -4455,32 +4803,14 @@ fetch('/currencies')
                                             if (currName) {
                                                 baseCurrCode = currName.ISO_Code
                                             }
-                                            //calculate the cash equivalents 
-                                            const newCashFlowCashEquiv = Number(parseFloat(exId.CashFlowAmount) / parseFloat(relativeRate)).toFixed(2);
+                                            //calculate the cash equivalents
+                                            let newCashFlowCashEquiv = 0
+                                            newCashFlowCashEquiv = Number(parseFloat(exId.CashFlowAmount) / parseFloat(relativeRate)).toFixed(2);
 
                                             newEmptyRow.querySelector('.Equivsymbol').innerText = baseCurrCode;
                                             newEmptyRow.querySelector('.cashEquivCell').innerText = Number(newCashFlowCashEquiv).toFixed(2);;//place the cash Equiv value on the cashEquiv cell
-                                            document.querySelector('.totalExpenses').innerText = Number(totalPayOutsRange).toFixed(2)
-                                            document.querySelector('.totalIncome').innerText = Number(totalPayInsRange).toFixed(2)
+
                                             //UPDATE ALL TOTALS
-                                            const cashBalance = Number(parseFloat(totalPayInsRange + openingBalance) - parseFloat(totalPayOutsRange)).toFixed(2)
-
-
-                                            if (cashBalance < 0) {//if the number is negative
-                                                const numberString = cashBalance.toString();//convert to string so that you can use the split method
-                                                formattedValue = numberString.split('-')[1]
-                                                sign = -1
-                                                if (sign === -1) {
-                                                    document.querySelector('.CashBalance').style.color = 'red';
-                                                    const updatedValue = '-' + baseCurrCode + Number(formattedValue).toFixed(2);
-                                                    newEmptyRow.querySelector('.runningBalance').innerText = updatedValue
-                                                }
-                                            }
-                                            else if (cashBalance >= 0) {
-                                                document.querySelector('.CashBalance').style.color = 'black';
-                                                document.querySelector('.CashBalance').innerText = baseCurrCode + '  ' + Number(cashBalance).toFixed(2);;//place the cash Equiv value on the cashEquiv cell
-                                            }
-
                                             //  use the fetch for the route with POST method and update the expense rate in the database
                                             cashFlowRate.blur();
                                             notification("Updating....");
@@ -4501,8 +4831,55 @@ fetch('/currencies')
                                                     // Show alert
                                                     if (data.amUpdated == true) {
                                                         notification('Updated')
-                                                        spinner.style.display = 'none'
-                                                        // defaultDisplayContent2(startDate, endDate)
+                                                        let updatedDoc = data.document
+                                                        const index = cashFlowArray.findIndex(record => record._id === updatedDoc._id);
+                                                        if (index !== -1) {
+                                                            cashFlowArray[index] = updatedDoc;
+                                                        }
+                                                        let oldCashEquiv = Number(newEmptyRow.querySelector('.cashEquivBefore').innerText)
+
+                                                        let newCashEquiv = 0
+                                                        let difference = 0
+                                                        if (updatedDoc.CashFlowType === "Pay in") {
+                                                            newCashEquiv = Number(updatedDoc.CashFlowCashEquiv)
+                                                            difference = newCashEquiv - oldCashEquiv
+                                                            totalUpdatePayins += difference; // Adjust pay-in total
+                                                        } else if (updatedDoc.CashFlowType === "Payout") {
+                                                            newCashEquiv = Number(updatedDoc.CashFlowCashEquiv)
+                                                            difference = newCashEquiv - oldCashEquiv
+                                                            totalUpdatePayouts += difference; // Adjust payout total
+                                                        }
+
+                                                        // Update the totalPayOutsRange and totalPayInsRange
+
+                                                        let formattedValue = null;
+                                                        //GET THE CURRENCY SYMBOL
+                                                        const checkCurrency = Array.from(newCurrencies).find((curr) => curr.BASE_CURRENCY === "Y");
+                                                        const checkSymbol = Array.from(WorldCurrencies).find((curr) => (curr.Currency_Name).toLowerCase() === (checkCurrency.Currency_Name).toLowerCase());
+                                                        if (checkSymbol) {
+                                                            symbol = checkSymbol.ISO_Code
+                                                        };
+
+                                                        //TOTAL PAYINs 'whether filtered by cat or not'
+                                                        document.querySelector('.totalIncome').innerText = Number(totalUpdatePayins).toFixed(2);
+                                                        //TOTAL PAYOUts 'whether filtered by cat or not'
+                                                        document.querySelector(".totalExpenses").innerText = Number(totalUpdatePayouts).toFixed(2);
+                                                        //CALCULATE THE CASH BALANCE
+                                                        const cashBalance = (parseFloat(totalUpdatePayins) + parseFloat(openingBalance)) - parseFloat(totalUpdatePayouts)
+                                                        //THE CLOSING BALANCE DISPLAYED
+                                                        if (cashBalance < 0) {
+                                                            //if the number is negative
+                                                            const numberString = cashBalance.toString(); //convert to string so that you can use the split method
+                                                            formattedValue = numberString.split("-")[1];
+                                                            const updatedValue = "-" + " " + symbol + Number(formattedValue).toFixed(2);
+                                                            document.querySelector(".CashBalance").innerText = updatedValue;
+                                                            document.querySelector(".CashBalance").style.color = "red";
+                                                        } else if (cashBalance >= 0) {
+                                                            document.querySelector(".CashBalance").style.color = "black";
+                                                            document.querySelector(".CashBalance").innerText = symbol + "    " + Number(cashBalance).toFixed(2); //place the cash Equiv value on the cashEquiv cell
+                                                        }
+                                                        //update the cashflow array and update also the table
+                                                        updateTableData(cashFlowArray)
                                                     }
                                                     else {
                                                         let message = ''
@@ -4511,19 +4888,11 @@ fetch('/currencies')
                                                         }
                                                         else {
                                                             message = 'Failed to update.Please try again'
-
                                                         }
-
                                                         notification(message);
-                                                        const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                                        const eDate = localStorage.getItem('lastDate');
-                                                        const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                                        const endDate = new Date(eDate);
-
-                                                        defaultDisplayContent2(startDate, endDate);
-
+                                                        //update the cashflow array and update also the table
+                                                        updateTableData(cashFlowArray)
                                                     }
-
                                                 })
                                                 .catch(error => {
                                                     console.error(`Error updating base rate field for  ID: ${rowId}`, error);
@@ -4589,138 +4958,134 @@ fetch('/currencies')
                                 deleteRowsModal.style.display = 'none'
                                 checkedRows = []
                                 //appliy spinner
-                                displaySpinner()
-                                try {
-                                    fetch('/delete', {
-                                        method: 'DELETE',
-                                        headers: {
-                                            'Content-Type': 'application/json'
-                                        },
-                                        body: JSON.stringify({
-                                            checkedRowsId,
-                                            sessionId
-                                        })
-                                    })
-                                        .then(response => {
-                                            return response.json()
-                                        })
-                                        .then(data => {
-                                            if (data.amDeleted === true) {
-                                                checkedRowsId = []
-                                                currentPage = 1
-                                                localStorage.setItem('advCurrentPage', currentPage)
-                                                if (document.querySelector(".myCheck").checked === true) {
-                                                    document.querySelector(".myCheck").checked = false
-                                                }
-                                                // location.href = "/advanceCashMngmnt"
-                                                const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                                const eDate = localStorage.getItem('lastDate');
-                                                const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                                const endDate = new Date(eDate);
-                                                defaultDisplayContent2(startDate, endDate)
-                                                notification("Deleted");
+                                notification('Deleting....')
+                                deleteTableRows()
+                                async function deleteTableRows() {
+
+                                    try {
+                                        const startDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
+                                        const endDate = localStorage.getItem('lastDate');
+                                        // const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
+                                        // const endDate = new Date(eDate);
+                                        pageSize = localStorage.getItem('advItemsPerPage');
+                                        if (pageSize === null) {
+                                            pageSize = 5
+                                        }
+                                        else {
+                                            pageSize = pageSize
+                                        }
+                                        page = 1
+                                        const advancedSearchInput = localStorage.getItem('advSearchInput');
+
+                                        const response = await fetch('/delete', {
+                                            method: 'DELETE',
+                                            headers: {
+                                                'Content-Type': 'application/json'
+                                            },
+                                            body: JSON.stringify({
+                                                checkedRowsId,
+                                                startDate: startDate,
+                                                endDate: endDate,
+                                                pageSize: pageSize,
+                                                page: page,
+                                                advancedSearchInput: advancedSearchInput,
+                                                sessionId
+                                            })
+                                        });
+                                        const data = await response.json();
+                                        if (data.amDeleted === true) {
+                                            checkedRowsId = []
+                                            currentPage = 1
+                                            localStorage.setItem('advCurrentPage', currentPage)
+                                            if (document.querySelector(".myCheck").checked === true) {
+                                                document.querySelector(".myCheck").checked = false
+                                            }
+                                            itemsToProcess = []
+                                            let cashBalance = 0
+                                            totalUpdatePayins = data.advIncomeTotal
+                                            totalUpdatePayouts = data.advExpenseTotal
+                                            if (advancedSearchInput !== null) {
+                                                totalPages = parseInt(data.searchedTotalPages)
+                                                cashFlowArray = data.searchedItemsToProcess
+                                                itemsToProcess = data.searchedItemsToProcess
+                                                cashBalance = Number((parseFloat(data.advSearchedpayinTotal) + parseFloat(openingBalance)) - parseFloat(data.advSearchedpayoutTotal)).toFixed(2);
+                                                currentCashFlowTable(totalPages, page, pageSize, itemsToProcess)
+                                                //TOTAL PAYINs 'whether filtered by cat or not'
+                                                document.querySelector('.totalIncome').innerText = Number(data.advSearchedpayinTotal).toFixed(2);
+                                                //TOTAL PAYOUts 'whether filtered by cat or not'
+                                                document.querySelector(".totalExpenses").innerText = Number(data.advSearchedpayoutTotal).toFixed(2);
+                                            }
+                                            else if (advancedSearchInput === null) {
+                                                // alert(pageSize)
+
+                                                totalPages = parseInt(data.totalPages)
+                                                cashFlowArray = data.itemsToProcess
+                                                itemsToProcess = data.itemsToProcess
+                                                cashBalance = Number((parseFloat(data.advIncomeTotal) + parseFloat(openingBalance)) - parseFloat(data.advExpenseTotal)).toFixed(2);
+                                                currentCashFlowTable(totalPages, page, pageSize, itemsToProcess)
+                                                //TOTAL PAYINs 'whether filtered by cat or not'
+                                                document.querySelector('.totalIncome').innerText = Number(data.advIncomeTotal).toFixed(2);
+                                                //TOTAL PAYOUts 'whether filtered by cat or not'
+                                                document.querySelector(".totalExpenses").innerText = Number(data.advExpenseTotal).toFixed(2);
+                                            }
+                                            //if the totals are equal to 0 of the generated range.dispay message that there is no items t display
+                                            if (Number(data.advIncomeTotal) === 0 && Number(data.advExpenseTotal) === 0) {
+                                                //display message
+                                                document.getElementById('Table_messages').style.display = 'block'
+                                                document.querySelector('.addRow').style.display = 'block'
+                                                document.querySelector('.fa-plus').style.display = 'inline'
+                                                document.querySelector('.noDataText').innerText = 'No Data To Display'
+                                                document.querySelector('.noDataText2').innerText = 'There are no cashflows in the selected time period'
                                             }
                                             else {
-                                                notification("Not Deleted..error occured");
-                                                const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                                const eDate = localStorage.getItem('lastDate');
-                                                const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                                const endDate = new Date(eDate);
-                                                defaultDisplayContent2(startDate, endDate)
-
+                                                document.getElementById('Table_messages').style.display = 'none'
                                             }
-                                        })
 
-                                } catch (err) {
-                                    console.error(err);
+
+                                            let formattedValue = null;
+                                            //GET THE CURRENCY SYMBOL
+                                            const checkCurrency = Array.from(newCurrencies).find((curr) => curr.BASE_CURRENCY === "Y");
+                                            const checkSymbol = Array.from(WorldCurrencies).find((curr) => (curr.Currency_Name).toLowerCase() === (checkCurrency.Currency_Name).toLowerCase());
+                                            if (checkSymbol) {
+                                                symbol = checkSymbol.ISO_Code
+                                            };
+
+
+                                            //CALCULATE THE CASH BALANCE
+                                            //THE CLOSING BALANCE DISPLAYED
+                                            if (cashBalance < 0) {
+                                                //if the number is negative
+                                                const numberString = cashBalance.toString(); //convert to string so that you can use the split method
+                                                formattedValue = numberString.split("-")[1];
+                                                const updatedValue = "-" + " " + symbol + Number(formattedValue).toFixed(2);
+                                                document.querySelector(".CashBalance").innerText = updatedValue;
+                                                document.querySelector(".CashBalance").style.color = "red";
+                                            } else if (cashBalance >= 0) {
+                                                document.querySelector(".CashBalance").style.color = "black";
+                                                document.querySelector(".CashBalance").innerText = symbol + "    " + Number(cashBalance).toFixed(2); //place the cash Equiv value on the cashEquiv cell
+                                            }
+                                            // Filter out records matching deleted IDs
+                                            // currentCashFlowTable(totalPages, page, pageSize, cashFlowArray)
+                                            notification("Deleted");
+                                        }
+                                        else {
+                                            notification("No Data Deleted");
+
+                                            currentCashFlowTable(totalPages, page, pageSize, cashFlowArray)
+                                            removeSpinner()
+
+                                        }
+
+                                    } catch (err) {
+                                        console.error(err);
+                                    }
                                 }
+
                             }
 
                         })
-                        //==================================================================================================
-                        //FUNCTION TO CALL WHEN SAVING NEW RECORD
-                        async function saveCashFlowRecord(itemsToProcess, sessionId) {
-                            //THEN LET THE SERVER STORE IT IN THE DATABASE
-                            // displaySpinner()
-                            notification("Saving Data.....");
-                            try {
-                                const response = await fetch('/saveCashflow', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    },
-                                    body: JSON.stringify({
-                                        itemsToProcess,
-                                        sessionId
-                                    })
-                                });
 
-                                const data = await response.json();
-                                if (data.isSaving === true) {
-                                    let dbDocs = data.documents //array from db
-                                    for (let i = 0; i < dbDocs.length; i++) {
-                                        const doc = dbDocs[i];
-                                        cashFlowArray.push(doc)
 
-                                    }
-                                    //get the data recored for that period selected
-                                    let cashFlowsForThatDay = []
-                                    const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                    const eDate = localStorage.getItem('lastDate');
-                                    const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                    const endDate = new Date(eDate);
-                                    for (let i = 0; i < dbDocs.length; i++) {
-                                        const row = dbDocs[i];
-                                        const expDate = row.CashFlowDate;
-                                        const parts = expDate.split("/");
-                                        const formattedDate =
-                                            parts[1] + "/" + parts[0] + "/" + parts[2];
-                                        const formattedDates2 = new Date(formattedDate);
-                                        if (startDate.getTime() <= formattedDates2.getTime() && formattedDates2.getTime() <= endDate.getTime()) {
-                                            //STORE IN AN ARRAY 
-                                            cashFlowsForThatDay.push(row)
-                                        }
-                                    }
-                                    const itemsFromLS = localStorage.getItem('advItemsPerPage');
-                                    if (itemsFromLS === null) {
-                                        advItemsPerPage = 5
-                                    }
-                                    else if (itemsFromLS !== null) {
-                                        advItemsPerPage = itemsFromLS
-                                    }
-
-                                    const totalPages = Math.ceil(cashFlowsForThatDay.length / advItemsPerPage); // 7
-                                    if (cashFlowsForThatDay.length > advItemsPerPage) {
-                                        currentPage = Math.ceil(cashFlowsForThatDay.length / advItemsPerPage)
-
-                                    } else if (cashFlowsForThatDay.length < advItemsPerPage) {
-                                        currentPage = 1
-                                    }
-                                    if (currentPage > totalPages) {
-                                        currentPage = totalPages; // Set to 7 (last page)
-                                    }
-                                    localStorage.setItem('advCurrentPage', currentPage)// VARIABLE IN THE LOCAL STORAGE, IF THERE IS NON WE TAKE PAGE1
-                                    notification("Saved");
-
-                                    await defaultDisplayContent2(startDate, endDate);
-                                } else {
-                                    // Error saving data
-
-                                    spinner.style.display = 'none';
-                                    const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                    const eDate = localStorage.getItem('lastDate');
-                                    const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                    const endDate = new Date(eDate);
-                                    await defaultDisplayContent2(startDate, endDate);
-                                    displayContainerBlocks()
-                                    notification("Not Saved..error occured");
-
-                                }
-                            } catch (error) {
-                                console.error('Error saving data:', error);
-                                notification("Error saving data. Please try again.");
-                            }
-                        }
                         //============================================================================================
                         function insertCategoryRecord(categoryToDb, sessionId) {
                             //THEN SEND INFORMATION TO THE DATABASE, UPDATING ONLY THE CASH EQUIV STATUS NOT THE ENTIRE COLLECTION
@@ -6809,7 +7174,8 @@ fetch('/currencies')
                                 });
 
                                 const data = await response.json();
-                                cashFlowArray = []
+                                console.log(data)
+                                // cashFlowArray = []
                                 let payInArray = []
                                 let payOutArray = []
                                 // Handle response from the server
@@ -6817,23 +7183,16 @@ fetch('/currencies')
                                     //display the modal updating the user that data has been uploaded
                                     for (let i = 0; i < data.documents.length; i++) {
                                         const doc = data.documents[i];
+                                        // Categorize the document and update totals
                                         if (doc.CashFlowType === 'Pay in') {
-                                            payInArray.push(doc)
-                                        }
-                                        else {
-                                            payOutArray.push(doc)
+                                            payInArray.push(doc);
+                                            totalUpdatePayins += parseFloat(doc.CashFlowCashEquiv); // Add to Payin total
+                                        } else if (doc.CashFlowType === 'Payout') {
+                                            payOutArray.push(doc);
+                                            totalUpdatePayouts += parseFloat(doc.CashFlowCashEquiv); // Add to Payout total
                                         }
                                         cashFlowArray.push(doc);
                                     }
-
-                                    //after the upload process is successfully done,show the table and remove spinner
-
-                                    const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                    const eDate = localStorage.getItem('lastDate');
-                                    const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                    const endDate = new Date(eDate);
-
-
                                     //update the categories arrays
                                     let dbDocs = data.categoriesDocs;
                                     for (let i = 0; i < dbDocs.length; i++) {
@@ -6852,9 +7211,54 @@ fetch('/currencies')
                                         }
 
                                     }
-                                    // updateFilterByCategory(startDate, endDate)
+                                    //UPDATE THE TOTALS
+                                    //GET THE TOTALS OF THE INSERTED DATA
+
+                                    let formattedValue = null;
+                                    let cashBalance = 0;
+                                    //GET THE CURRENCY SYMBOL
+                                    const checkCurrency = Array.from(newCurrencies).find((curr) => curr.BASE_CURRENCY === "Y");
+                                    const checkSymbol = Array.from(WorldCurrencies).find((curr) => (curr.Currency_Name).toLowerCase() === (checkCurrency.Currency_Name).toLowerCase());
+                                    if (checkSymbol) {
+                                        symbol = checkSymbol.ISO_Code
+                                    };
+
+                                    //TOTAL PAYINs 'whether filtered by cat or not'
+                                    document.querySelector('.totalIncome').innerText = Number(totalUpdatePayins).toFixed(2);
+                                    //TOTAL PAYOUts 'whether filtered by cat or not'
+                                    document.querySelector(".totalExpenses").innerText = Number(totalUpdatePayouts).toFixed(2);
+                                    //CALCULATE THE CASH BALANCE
+                                    //THE CLOSING BALANCE DISPLAYED
+                                    if (cashBalance < 0) {
+                                        //if the number is negative
+                                        const numberString = cashBalance.toString(); //convert to string so that you can use the split method
+                                        formattedValue = numberString.split("-")[1];
+                                        const updatedValue = "-" + " " + symbol + Number(formattedValue).toFixed(2);
+                                        document.querySelector(".CashBalance").innerText = updatedValue;
+                                        document.querySelector(".CashBalance").style.color = "red";
+                                    } else if (cashBalance >= 0) {
+                                        document.querySelector(".CashBalance").style.color = "black";
+                                        document.querySelector(".CashBalance").innerText = symbol + "    " + Number(cashBalance).toFixed(2); //place the cash Equiv value on the cashEquiv cell
+                                    }
+
                                     // display the modal with the total inserted count
-                                    defaultDisplayContent2(startDate, endDate)
+                                    currentPage = 1
+                                    localStorage.setItem('advCurrentPage', currentPage)
+                                    const itemsFromLS = localStorage.getItem('advItemsPerPage');
+                                    if (itemsFromLS === null) {
+                                        advItemsPerPage = 5
+                                    }
+                                    else if (itemsFromLS !== null) {
+                                        advItemsPerPage = itemsFromLS
+                                    }
+
+                                    const startIndex = (parseInt(currentPage) - 1) * parseInt(advItemsPerPage);
+                                    const endIndex = startIndex + parseInt(advItemsPerPage);
+                                    const itemsToProcess = cashFlowArray.slice(startIndex, endIndex);
+                                    const totalPages = Math.ceil(cashFlowArray.length / advItemsPerPage);
+
+                                    // alert(totalPages, currentPage, advItemsPerPage)
+                                    currentCashFlowTable(totalPages, currentPage, advItemsPerPage, itemsToProcess)
                                     successModal.style.display = 'block'
                                     successModalText.innerText = data.documents.length
                                     document.querySelector('.importText').innerText = 'Import Completed'
@@ -6865,7 +7269,9 @@ fetch('/currencies')
                                     document.querySelector('.uploadError').style.display = 'none'
                                     console.log("Data successfully processed and saved.");
                                     removeSpinner()
-                                } else {
+                                }
+
+                                else {
                                     let message = ''
                                     if (data.isSaving === false) {
                                         message = 'No cashflows uploaded,cashflows already exist'
@@ -6874,11 +7280,34 @@ fetch('/currencies')
                                         message = 'Failed to upload.Please try again'
 
                                     }
-                                    const sDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                    const eDate = localStorage.getItem('lastDate');
-                                    const startDate = new Date(sDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                    const endDate = new Date(eDate);
-                                    defaultDisplayContent2(startDate, endDate)
+                                    if (data.isSaving !== false) {
+                                        alert(data.isSaving)
+                                        // message = 'No cashflows uploaded,cashflows already exist'
+                                    }
+                                    else {
+                                        // message = 'Failed to upload.Please try again'
+
+                                    }
+
+                                    const itemsFromLS = localStorage.getItem('advItemsPerPage');
+                                    if (itemsFromLS === null) {
+                                        advItemsPerPage = 5
+                                    }
+                                    else if (itemsFromLS !== null) {
+                                        advItemsPerPage = itemsFromLS
+                                    }
+                                    page = localStorage.getItem('advCurrentPage')// VARIABLE IN THE LOCAL STORAGE, IF THERE IS NON WE TAKE PAGE1
+                                    //check if the page is empty or if the painfilter is not empty and that we are in the filtering mode
+                                    if (page === null) {
+                                        page = 1
+                                    }
+                                    else {
+                                        page = page
+                                    }
+
+                                    const totalPages = Math.ceil(cashFlowArray.length / advItemsPerPage); // 7
+                                    currentCashFlowTable(totalPages, page, pageSize, cashFlowArray)
+
                                     // display the modal with the total inserted count
                                     successModal.style.display = 'block'
                                     successModalText.innerText = data.documents.length
@@ -6891,8 +7320,8 @@ fetch('/currencies')
                                     document.querySelector('.uploadError').style.display = 'none'
                                     //after the upload process is successfully done,show the table and remove spinner
                                     removeSpinner()
-                                    // console.error("Error:", data.isSaving);
                                 }
+
                             } catch (error) {
                                 console.error("Error uploading CSV:", error);
                             }
