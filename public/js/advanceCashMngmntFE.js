@@ -7183,15 +7183,38 @@ fetch('/currencies')
                                     //display the modal updating the user that data has been uploaded
                                     for (let i = 0; i < data.documents.length; i++) {
                                         const doc = data.documents[i];
-                                        // Categorize the document and update totals
-                                        if (doc.CashFlowType === 'Pay in') {
-                                            payInArray.push(doc);
-                                            totalUpdatePayins += parseFloat(doc.CashFlowCashEquiv); // Add to Payin total
-                                        } else if (doc.CashFlowType === 'Payout') {
-                                            payOutArray.push(doc);
-                                            totalUpdatePayouts += parseFloat(doc.CashFlowCashEquiv); // Add to Payout total
+                                      // Find index of existing document in cashFlowArray
+                                        const existingIndex = cashFlowArray.findIndex(item => item._id === doc._id);
+
+                                        if (existingIndex !== -1) {
+                                            // get the previous cashflow before updating
+                                            let oldCashEquiv = cashFlowArray[existingIndex].CashFlowCashEquiv
+                                            //  Document exists, update it
+                                            cashFlowArray[existingIndex] = doc;
+
+                                            let newCashEquiv = 0
+                                            let difference = 0
+                                            if (doc.CashFlowType === 'Pay in') {
+                                                newCashEquiv = Number(doc.CashFlowCashEquiv)
+                                                difference = newCashEquiv - oldCashEquiv
+                                                totalUpdatePayins += difference; // Adjust pay-in total
+                                            } else if (doc.CashFlowType === 'Payout') {
+                                                newCashEquiv = Number(doc.CashFlowCashEquiv)
+                                                difference = newCashEquiv - oldCashEquiv
+                                                totalUpdatePayouts += difference; // Adjust payout total
+                                            }
+
+                                        } else {
+
+                                            //  Document doesn't exist, add it
+                                            cashFlowArray.push(doc);
+                                            // Update Payin and Payout totals
+                                            if (doc.CashFlowType === 'Pay in') {
+                                                totalUpdatePayins += parseFloat(doc.CashFlowCashEquiv);
+                                            } else if (doc.CashFlowType === 'Payout') {
+                                                totalUpdatePayouts += parseFloat(doc.CashFlowCashEquiv);
+                                            }
                                         }
-                                        cashFlowArray.push(doc);
                                     }
                                     //update the categories arrays
                                     let dbDocs = data.categoriesDocs;
@@ -7228,6 +7251,8 @@ fetch('/currencies')
                                     //TOTAL PAYOUts 'whether filtered by cat or not'
                                     document.querySelector(".totalExpenses").innerText = Number(totalUpdatePayouts).toFixed(2);
                                     //CALCULATE THE CASH BALANCE
+                                    
+                                    cashBalance = Number((parseFloat(totalUpdatePayins) + parseFloat(openingBalance)) - totalUpdatePayouts).toFixed(2);
                                     //THE CLOSING BALANCE DISPLAYED
                                     if (cashBalance < 0) {
                                         //if the number is negative
