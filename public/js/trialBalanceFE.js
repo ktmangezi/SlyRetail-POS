@@ -174,6 +174,8 @@ fetch('/currencies')
                                     // Convert back to JavaScript Date objects (optional, only if needed)
                                     startDate = momntStartDate1.toDate();
                                     endDate = momntEndDate1.toDate();
+                                    console.log(startDate)
+                                    console.log(endDate)
                                     const theStartDate = moment(startDate).format('DD/MM/YYYY');
                                     const theEndDate = moment(endDate).format('DD/MM/YYYY');
                                     //create another span
@@ -295,7 +297,8 @@ fetch('/currencies')
                                                     const formattedDate = parts[1] + "/" + parts[0] + "/" + parts[2];
                                                     const formattedDates2 = new Date(formattedDate);
                                                     const formattedDates2Zim = moment.tz(formattedDates2, "Africa/Harare").startOf('day').toDate();
-                                                    if (each.category === row.CashFlowCategory) {
+                                                    console.log("payin" + formattedDates2Zim)
+                                                    if ((each.category).toLowerCase() === row.CashFlowCategory) {
                                                         if (startDate.getTime() <= formattedDates2Zim.getTime() && formattedDates2Zim.getTime() <= endDate.getTime()) {//CODE FOR 
                                                             //TIRIMO CHECK THE TOTALS OF THE AVAILABLE CATEGORIES
                                                             totalPayInCatAmnt1 = parseFloat(totalPayInCatAmnt1) + parseFloat(row.CashFlowCashEquiv);
@@ -320,7 +323,9 @@ fetch('/currencies')
                                                     const formattedDate = parts[1] + "/" + parts[0] + "/" + parts[2];
                                                     const formattedDates2 = new Date(formattedDate);
                                                     const formattedDates2Zim = moment.tz(formattedDates2, "Africa/Harare").startOf('day').toDate();
-                                                    if (each.category === row.CashFlowCategory) {
+                                                    console.log("payout" + formattedDates2Zim)
+                                                    console.log("payout" + each.category)
+                                                    if ((each.category).toLowerCase() === row.CashFlowCategory) {
                                                         if (startDate.getTime() <= formattedDates2Zim.getTime() && formattedDates2Zim.getTime() <= endDate.getTime()) {//CODE FOR 
                                                             //TIRIMO CHECK THE TOTALS OF THE AVAILABLE CATEGORIES
                                                             totalPayOutCatAmnt = parseFloat(totalPayOutCatAmnt) + parseFloat(row.CashFlowCashEquiv);
@@ -338,24 +343,24 @@ fetch('/currencies')
                                         // Append the row to the table body
                                         tbody.appendChild(myRow);
                                         //ADD CLICKABLE EVENTS ON EACH CATEGORY
-                                        nameCell.addEventListener("click", () => {
+                                        // nameCell.addEventListener("click", () => {
 
-                                            //onclick go to your respective page displaying only the items of with that category
-                                            if (each.Balance === 'PayIn') {
-                                                //open the respective page which is payIn
-                                                location.href = "/payIn"
-                                                const payInCat = each.category
-                                                //STORE THE CLICKED VALUE IN L;OCAL STORAGE SO THAT IT CAN BE USED IN THE PAYOUT PAGE
-                                                localStorage.setItem("payInCategory", payInCat)
-                                            }
-                                            if (each.Balance === 'PayOut') {
-                                                //open the respective page which is payIn
-                                                location.href = "/payOut"
-                                                const payOutCat = each.category
-                                                //STORE THE CLICKED VALUE IN L;OCAL STORAGE SO THAT IT CAN BE USED IN THE PAYOUT PAGE
-                                                localStorage.setItem("payOutcategoryName", payOutCat)
-                                            }
-                                        })
+                                        //     //onclick go to your respective page displaying only the items of with that category
+                                        //     if (each.Balance === 'PayIn') {
+                                        //         //open the respective page which is payIn
+                                        //         location.href = "/payIn"
+                                        //         const payInCat = each.category
+                                        //         //STORE THE CLICKED VALUE IN L;OCAL STORAGE SO THAT IT CAN BE USED IN THE PAYOUT PAGE
+                                        //         localStorage.setItem("payInCategory", payInCat)
+                                        //     }
+                                        //     if (each.Balance === 'PayOut') {
+                                        //         //open the respective page which is payIn
+                                        //         location.href = "/payOut"
+                                        //         const payOutCat = each.category
+                                        //         //STORE THE CLICKED VALUE IN L;OCAL STORAGE SO THAT IT CAN BE USED IN THE PAYOUT PAGE
+                                        //         localStorage.setItem("payOutcategoryName", payOutCat)
+                                        //     }
+                                        // })
                                     }
 
                                     //append the last row with totals outside the loop of cash balance and total
@@ -571,7 +576,7 @@ fetch('/currencies')
                                                 const formattedDates2Zim = moment.tz(formattedDates2, "Africa/Harare").startOf('day').toDate();
                                                 if (formattedDates2Zim.getTime() <= endDate.getTime()) {//CODE FOR 
                                                     //TIRIMO CHECK THE TOTALS OF THE AVAILABLE CATEGORIES
-                                                    if (each.category === data.CashFlowCategory && data.CashFlowType === 'Pay in') {
+                                                    if ((each.category).toLowerCase() === data.CashFlowCategory && data.CashFlowType === 'Pay in') {
                                                         totalPayInCatAmnt1 = parseFloat(totalPayInCatAmnt1) + parseFloat(data.CashFlowCashEquiv);
                                                         totalPayIn = parseFloat(totalPayIn) + parseFloat(data.CashFlowCashEquiv)
                                                     }
@@ -602,7 +607,7 @@ fetch('/currencies')
 
                                                 if (formattedDates2Zim.getTime() <= endDate.getTime()) {//CODE FOR 
                                                     //TIRIMO CHECK THE TOTALS OF THE AVAILABLE CATEGORIES
-                                                    if (each.category === data.CashFlowCategory && data.CashFlowType === 'Payout') {
+                                                    if ((each.category).toLowerCase() === data.CashFlowCategory && data.CashFlowType === 'Payout') {
                                                         totalPayOutCatAmnt1 = parseFloat(totalPayOutCatAmnt1) + parseFloat(data.CashFlowCashEquiv);
                                                         totalPayOut = parseFloat(totalPayOut) + parseFloat(data.CashFlowCashEquiv)
                                                     }
