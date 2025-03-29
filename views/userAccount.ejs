@@ -9,14 +9,105 @@
     <link rel="stylesheet" href="css/userAccount.css">
     <link rel="icon" type="image/x-icon" href="/images/newslylogo.jpg">
     <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
     <link rel="stylesheet" href="css/notification.css">
     <link href="css/all.min.css" rel="stylesheet" />
 
 
 </head>
 
-<body>
-    <div id="tool-bar" class="toolbar">
+<body style="margin: 0;">
+    <style>
+        .hidden {
+            display: none;
+        }
+
+        /* Blur background */
+
+        .center-form {
+            display: none;
+            position: absolute;
+            z-index: 1050;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-left: 5px;
+            /* Small gap from button */
+        }
+
+        /* Ensure dropdown button has proper positioning context */
+        #dropdownToken {
+            position: relative;
+        }
+
+        .center-form .card {
+            margin: 0;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Rest of your existing CSS remains the same */
+        .token-input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tokenbtns {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tick,
+        .x {
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        .tick {
+            color: green;
+        }
+
+        .x {
+            color: red;
+        }
+
+        /* Form input styling */
+        #token {
+            padding: 0.375rem 0.75rem;
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            flex-grow: 1;
+            width: 100%;
+        }
+
+        /* Rotate the dropdown arrow when the dropdown is open */
+        .dropdown-toggle::after {
+            transition: transform 0.3s ease;
+        }
+
+        .dropdown-toggle.show::after {
+            transform: rotate(180deg);
+        }
+    </style>
+    <div class="loader-container">
+        <div class="loader" style="margin-top: 18%;"></div>
+        <p class="loader-text">Loading...</p>
+    </div>
+    <div id="tool-bar" class="toolbar" style="display: none;">
         <div class="menu-icon iconbtn">
             <div class="bar"></div>
             <div class="bar"></div>
@@ -25,10 +116,10 @@
         <span id="toolbar-text">User Account </span>
     </div>
     <!--The MENU ITEMS-->
-    <div class="icon-nav close">
+    <div class="icon-nav close" style="display: none;">
         <script src="js/common-iconsFE.js"></script>
     </div>
-    <div class="content">
+    <div class="content" style="display: none;">
         <!-- add the change password and signout part with javascript  -->
         <div class="card">
 
@@ -40,7 +131,6 @@
             </div>
             <div class="user_details">
                 <h3 class="myEmail">
-                    <%=database%>
                 </h3>
             </div>
             <div class="card_count">
@@ -49,110 +139,148 @@
                     <input type="email" id="email" name="email" required>
                     <span id="editIcon" class="edit-icon"><i class="fas fa-pen"></i></span>
                 </div>
-                <div class="field" style="margin-top: 30px;">
+                <div class="field" style="margin-top: 12px;">
                     <label for="password">Password:</label>
                     <input type="password" id="password" name="password" required>
                     <i class="fa fa-eye-slash" aria-hidden="true" id="eyeSlash"
                         style="position: absolute;top: 15px; left: 90%;cursor: pointer; color: #919191;display: none;"></i>
                     <span id="eIcon" class="edit-icon"><i class="fas fa-pen"></i></span>
+                    <i id="togglePassword" class="fas fa-eye-slash hidden"></i>
+                </div>
+
+            </div>
+            <div class="field" style="margin-left: 12px;margin-top: 8px; position: relative;">
+                <!-- Added position: relative -->
+                <div class="dropdown" id="dropdownToken"
+                    style="width: 88%; margin-left: 10px;border-bottom: 2.0px solid black;">
+                    <span class="tokenTypeText">Token:</span>
+                    <button class="btn dropdown-toggle tokenBtn" href="#" role="button" data-bs-toggle="dropdown"
+                        aria-expanded="false" style="background-color: transparent;">
+                        <span class="tokenType">Select Token</span>
+                    </button>
+                    <ul class="dropdown-menu" id="thirdPartyTokenDropdown">
+                        <li class="thirdPartytokenOptions"> <a class="dropdown-item" id="option0" href="#"
+                                data-token-name="Loyverse">Loyverse</a>
+                        </li>
+                        <li class="thirdPartytokenOptions"> <a class="dropdown-item" id="option1" href="#"
+                                data-token-name="Sales Play">Sales Play</a>
+                        </li>
+                        <li class="thirdPartytokenOptions"> <a class="dropdown-item" id="option2" href="#"
+                                data-token-name="Erp Next">Erp Next</a></li>
+                        <li class="thirdPartytokenOptions"> <a class="dropdown-item" id="option3" href="#"
+                                data-token-name="Ultimate P.O.S">Ultimate P.O.S</a>
+                        </li>
+                        <li class="thirdPartytokenOptions"> <a class="dropdown-item" id="option4" href="#"
+                                data-token-name="Ewity">Ewity</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Modal positioned near the dropdown button -->
+                <div class="center-form token-modal"
+                    style="display: none; position: absolute; top: 100%; left: 0; z-index: 1000; min-width: 300px;">
+                    <div class="card">
+                        <div class="card-header" style="background-color: seagreen;color: white;">
+                            <h4>Set <span class="tokenSpan"></span> Token</h4>
+                        </div>
+                        <div class="card-body">
+                            <form id="tokenForm">
+                                <div class="form-group token-input-group">
+                                    <input type="text" name="token" id="newtokeninput" class="form-control"
+                                        placeholder="Enter Token">
+                                    <span class="tokenbtns">
+                                        <div class="tick">
+                                            <i class="fas fa-check" id="submittoken"></i>
+                                        </div>
+                                        <div class="x">
+                                            <i class="fas fa-times" id="canceltoken"></i>
+                                        </div>
+                                    </span>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <div class="field" style="margin-left: 20px;">
-                <div id="overallContainer">
-                    <div class="baseCurrText">Base Currency:<span class="baseCurr">Select
-                            Currency</span></div>
-                    <div class="baseCurrCaret"></div>
-                </div>
-                <div id="baseCurrDropdownContainer">
-                    <ul class="baseCurrencyDrop">
+            <div class="field" style="margin-left: 12px;margin-top: 20px;">
+                <!-- <div id="baseCurrDropdownContainer"> -->
+                <div class="dropdown" style="width: 88%; margin-left: 10px;border-bottom: 2.0px solid black;">
+                    <span class="baseCurrText">Base Currency:</span>
+                    <button class="btn dropdown-toggle currBtnDropdown" href="#" role="button" data-bs-toggle="dropdown"
+                        aria-expanded="false" style="background-color: transparent;">
+                        <span class="baseCurr">Select Currency</span>
+                    </button>
+                    <ul class="dropdown-menu baseCurrencyDrop">
                         <% currencies.forEach((option,index)=> { %>
-                            <li class="curr-option" id="CurrOption<%= index %>">
-                                <%= option.Currency_Name %>
+                            <li class="curr-option"><a class="dropdown-item" id="CurrOption<%= index %>" href="#"
+                                    style="padding: 6px;">
+                                    <%= option.Currency_Name %>
+                                </a>
+                                <span class="currencyId<%= index %>" hidden>
+                                    <%= option._id %>
+                                </span>
                             </li>
                             <% }) %>
                     </ul>
                 </div>
 
             </div>
-            <div class="deleteAccount" style="text-align: left;margin-left: 21px;margin-top: 15px;cursor: pointer;">
-                <i class="fa fa-trash" aria-hidden="true">
-                </i>
-                <p style="color: grey; font-style: italic; margin-left: 17px;margin-top: -16px;">
-                    Delete Account Permanently
-                </p>
+
+            <div class="delete-account-container" style="position: relative; display: inline-block;">
+                <!-- Your existing delete account trigger -->
+                <div class="deleteAccount"
+                    style="text-align: left; margin-left: 21px; margin-top: 15px; cursor: pointer;">
+                    <i class="fa fa-trash" aria-hidden="true"></i>
+                    <p style="color: grey; font-style: italic; margin-left: 17px; margin-top: -21px;">
+                        Delete Account Permanently
+                    </p>
+                </div>
+
+                <!-- Delete confirmation modal (initially hidden) -->
+                <div class="delete-modal" id="deleteAccountModal"
+                    style="display: none; position: absolute; left: 0; top: 100%; z-index: 100; 
+                            background: white; padding: 15px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <div class="delete-modal-content">
+                        <p>Do You Want To Delete Your Account?</p>
+                        <div style="display: flex; gap: 60px; margin-top: 10px;">
+                            <button id="yesDelete"
+                                style="padding: 5px 15px;width: 80px; background: #ff4444; color: white; border: none; border-radius: 3px;">Yes</button>
+                            <button id="noDelete"
+                                style="padding: 5px 15px; width: 80px; background: #ccc; border: none; border-radius: 3px;">No</button>
+                        </div>
+                    </div>
+                </div>
             </div>
+
             <div class="card_actions">
                 <button id="saveChanges" class="btnSave">Save</button>
                 <a href="/logout"> <button class="btnSignOut "> Sign Out</button></a>
             </div>
 
-            <!-- modal for checking if user wants to delte account -->
-            <div class="deleteAcc" id="deleteAccountiD">
-                <div class="deleteAccountContent">
-                    <div>
-                        <p>Do You Want To Delete Your Account?</p>
-                    </div>
-                    <button id="yesDelete">Yes</button>
-                    <button id="noDelete">No</button>
-                </div>
-                <i class="fa fa-times" id="closeDelete" aria-hidden="true"></i>
 
-            </div>
         </div>
-        <div class="modall" id="editFieldModal0">
+        <div class="modall" id="editData">
             <div class="modal-contentt">
                 <div>
-                    <label for="new-value">Enter Password:</label>
+                    <i class="fa fa-times" id="modallCancell" aria-hidden="true"></i>
+                    <label for="new-value" class="newValue">Enter Password:</label>
                     <input type="password" id="currentPassword" required>
-                </div>
-                <button id="save-Current-btn">Done</button>
-            </div>
-            <i class="fa fa-times" id="modallCancell" aria-hidden="true"></i>
-        </div>
-        <div class="modall" id="editFieldModal">
-            <div class="modal-contentt">
-                <div>
-                    <label for="new-value">Enter New Email:</label>
-                    <input type="email" id="newEmail" required>
+                    <i id="togglePassword1" class="fas fa-eye-slash"></i>
 
                 </div>
-
-                <button id="save-value-btn-email">Done</button>
+                <button class="save-Current-btn">Next</button>
             </div>
-            <i class="fa fa-times" id="modallCancel" aria-hidden="true"></i>
-
         </div>
-        <div class="modall" id="editFieldModal2">
-            <div class="modal-cont">
-                <div>
-                    <label for="new-value">Enter Old Password:</label>
-                    <input type="password" id="oldPassword" required>
-                </div>
-                <button id="save-old-btn-pass">Done</button>
-            </div>
-            <i class="fa fa-times" id="modalCanc" aria-hidden="true"></i>
-        </div>
-        <div class="modall" id="editFieldModal3">
-            <div class="modal-cont">
-                <div>
-                    <label for="new-value">Enter New Password:</label>
-                    <input type="password" id="newPassword" required>
 
-                </div>
-                <button id="save-new-btn-pass">Done</button>
-            </div>
-            <i class="fa fa-times" id="modallCanc" aria-hidden="true"></i>
-
-        </div>
         <div id="notificationBlock"></div>
         <div id="spinner"></div>
         <footer>
-            <p>&copy; 2023 SLYRetail. All rights reserved.</p>
+            <p>&copy; 2023 SlyRetail. All rights reserved.</p>
             <p>Phone: <a href="tel:0778287836">0778 287 836</a></p>
         </footer>
     </div>
-    <script src="js/userAccount.js"></script>
+    <script src="js/userAccountFE.js"></script>
+    <script src="js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>
