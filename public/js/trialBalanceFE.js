@@ -174,8 +174,8 @@ fetch('/currencies')
                                     // Convert back to JavaScript Date objects (optional, only if needed)
                                     startDate = momntStartDate1.toDate();
                                     endDate = momntEndDate1.toDate();
-                                    const theStartDate = startDate.format('DD/MM/YYYY');
-                                    const theEndDate = endDate.format('DD/MM/YYYY');
+                                    const theStartDate = moment(startDate).format('DD/MM/YYYY');
+                                    const theEndDate = moment(endDate).format('DD/MM/YYYY');
                                     //create another span
                                     const trialBalanceSpan = document.querySelector('.dateRange')
 
@@ -533,9 +533,9 @@ fetch('/currencies')
                                     startDate = momntStartDate1.toDate();
                                     endDate = momntEndDate1.toDate();
 
-                                    let theDate = startDate.format('DD/MM/YYYY');
-                                    let theEndDate = endDate.format('DD/MM/YYYY');
 
+                                    const theStartDate = moment(startDate).format('DD/MM/YYYY');
+                                    const theEndDate = moment(endDate).format('DD/MM/YYYY');
                                     const currencies = Array.from(newCurrencies).find(newCurrency => newCurrency.BASE_CURRENCY === 'Y');//find the base currency
                                     let baseCurrName
                                     if (currencies) {
