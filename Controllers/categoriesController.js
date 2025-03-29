@@ -210,7 +210,6 @@ export async function getCategories(req, sessionId) {
     if (db) {
       const myCategoriesModel = CashflowCategoriesModel(db);
       const allCashFlowCategories = await myCategoriesModel.find()
-      console.log(allCashFlowCategories)
       return { isocode, allCashFlowCategories };
     }
   }
