@@ -1,19 +1,127 @@
 // import { link } from "fs";
 
-let userCredentials = []
-//GET THE SESSION ID FROM THE LOCALSTORAGE
-const sessionId = localStorage.getItem('sessionId')
+let userCredentials = [];
+
+// Function to show notification
+function showSessionNotification(message, isCritical = false) {
+    // Check if notification already exists
+    let notification = document.getElementById('sessionNotification');
+
+    if (!notification) {
+        notification = document.createElement('div');
+        notification.id = 'sessionNotification';
+        notification.style.position = 'fixed';
+        notification.style.bottom = '20px';
+        notification.style.right = '20px';
+        notification.style.padding = '15px';
+        notification.style.color = 'white';
+        notification.style.borderRadius = '5px';
+        notification.style.zIndex = '10000';
+        notification.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+        notification.style.transition = 'all 0.3s ease';
+        document.body.appendChild(notification);
+    }
+
+    // Style based on criticality
+    if (isCritical) {
+        notification.style.backgroundColor = '#ff4444'; // Red for critical
+        notification.innerHTML = `
+      <div style="display: flex; align-items: center;">
+        <span style="margin-right: 10px;">⚠️</span>
+        <span>${message}</span>
+      </div>
+    `;
+    } else {
+        notification.style.backgroundColor = '#4CAF50'; // Green for warning
+        notification.innerHTML = `
+      <div style="display: flex; align-items: center;">
+        <span style="margin-right: 10px;">ℹ️</span>
+        <span>${message}</span>
+      </div>
+    `;
+    }
+
+    notification.style.display = 'block';
+
+    // Auto-hide after 5 seconds unless it's critical
+    if (!isCritical) {
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            setTimeout(() => {
+                notification.style.display = 'none';
+                notification.style.opacity = '1';
+            }, 300);
+        }, 5000);
+    }
+}
+
+// Function to check session expiry
+let sessionChecked = false;
+
+function checkSessionExpiry() {
+    if (sessionChecked) return;
+
+    fetch('/session-info?t=' + Date.now())
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'expired') {
+                forceLogout();
+                return;
+            }
+            if (data.status !== 'active') return;
+
+            const remainingTime = data.remainingTime;
+            const expiresAt = new Date(data.expiresAt)
+            if (remainingTime <= 0) {
+                forceLogout();
+            }
+        });
+}
+
+function forceLogout() {
+    sessionChecked = true;
+    showSessionNotification('Session expired. Logging out...', true);
+    setTimeout(() => {
+        // document.getElementById("logoutButton").click(); // Trigger the logout button click
+        const sessionId = localStorage.getItem('sessionId');
+        fetch('/logout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                sessionId
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.loggedOut === true) {
+                    // notification('Logged out successfully!');
+                    window.location.href = "/"; // Redirect to the login page
+                    localStorage.clear(); // Clear all local storage items
+                } else {
+                    console.log('Logout failed. Please try again.');
+                }
+            })
+            .catch(error => console.error("Logout error:", error));
+    }, 3000);
+}
+
+// Check every 5 seconds for strict control
+setInterval(checkSessionExpiry, 5000);
+window.addEventListener('focus', checkSessionExpiry);
+// GET THE SESSION ID FROM THE LOCALSTORAGE
+
+
 fetch('/dbname')
     .then(response => response.json())
     .then(data => {
-
-        //This will contain all the Menu Items and all the pages that should have this will access this single code
+        // This will contain all the Menu Items
         const menuItems = document.querySelector(".icon-nav");
         menuItems.insertAdjacentHTML(
             "afterbegin",
             `
 <div class="icon-bar">
-
     <ul class="nav-list">
         <li class="nav-icon">
           <div class="icon-link">
@@ -22,12 +130,10 @@ fetch('/dbname')
                 <span class="link_name">${data.dbName}</span>
             </a>
                      <i class="fas fa-caret-down arrow" ></i>
-
         </div>
         <ul class="sub-menu">
              <li>   <a href="userAccount">Account</a></li>
               <li>  <a id='logoutButton' href="logout">Sign Out</a></li>
-           
         </ul>
       </li>
         <hr class="horizontal-line1">
@@ -35,7 +141,7 @@ fetch('/dbname')
         <li class="nav-icon">
         <div class="icon-link">
             <a class="icon" id="cashMngmntIcon"> <img src="images/cashflow.png" alt="" srcset="">
-                <span class="link_name">  Cash Management</span>
+                <span class="link_name">Cash Management</span>
             </a>
              <i class="fas fa-caret-down arrow" ></i>
             <span class="tooltip">Cash Management</span>
@@ -78,11 +184,13 @@ fetch('/dbname')
             </li>
         </ul>
         </li>
-
     </ul>
 </div>
 `
         );
+
+
+
         const sidebarMenu = document.querySelector(".icon-nav");
         const closeBtn = document.querySelector(".iconbtn");
         let allIcons = document.querySelectorAll('.nav-icon')
@@ -121,6 +229,8 @@ fetch('/dbname')
                 } else {
                     if (element.classList.contains('show')) {
                         element.classList.remove('show');  // Close the clicked dropdown
+                        sidebarMenu.classList.add("close")
+
                     } else {
                         closeAllDropdowns();  // Close any other dropdown
                         element.classList.add('show');  // Open the clicked dropdown
@@ -155,6 +265,7 @@ fetch('/dbname')
                     if (data.loggedOut === true) {
                         // notification('Logged out successfully!');
                         window.location.href = "/"; // Redirect to the login page
+                        localStorage.clear(); // Clear all local storage items
                     } else {
                         console.log('Logout failed. Please try again.');
                     }
