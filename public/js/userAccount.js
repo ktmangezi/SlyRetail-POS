@@ -1,242 +1,336 @@
-let userCredentials = []; //array to store the user credentials
+// let userCredentials = []; //array to store the user credentials
 let newCurrencies = []//array to store currencies
 let baseCurrency = ''//to store base currency selected
+let clickedId = ""
 fetch('/getUserCredentials')
     .then(response => response.json())
-    .then(credentials => {
-        credentials.forEach((user) => {
-            userCredentials.push(user);
-        });
+    .then(data => {
+        userCredentials = data.credentials;
         fetch('/currencies')
             .then(response => response.json())
             .then(currencies => {
                 currencies.forEach((currency) => {
                     newCurrencies.push(currency);
                 });
+                const sessionId = localStorage.getItem('sessionId')
 
-                const editIcon = document.getElementById('editIcon');
-                const eIcon = document.getElementById('eIcon');
-
-                const editFieldEmail = document.getElementById('editFieldModal');
-                const editFieldPassword = document.getElementById('editFieldModal3');
-                const editFieldCPassword = document.getElementById('editFieldModal0');
-                const editFieldOldPassword = document.getElementById('editFieldModal2');
-
-                const saveValueBtnEmail = document.getElementById('save-value-btn-email');
-                const saveOldBtnPass = document.getElementById('save-old-btn-pass');
-                const saveNewBtnPass = document.getElementById('save-new-btn-pass');
-                const saveValueBtnCPass = document.getElementById('save-Current-btn');
-
+                //UPDATE THE DATABASENAME ON THE FORM
+                const editField = document.getElementById('editData');
                 const emailInput = document.getElementById('email');
-                const newEmailInput = document.getElementById('newEmail');
                 const passwordInput = document.getElementById('password');
-                const newPasswordInput = document.getElementById('newPassword');
-                const oldPasswordInput = document.getElementById('oldPassword');
                 const currentPasswordInput = document.getElementById('currentPassword');
 
-                const userEmail = document.querySelector('.myEmail').innerHTML;
+                const userEmail = document.querySelector('.myEmail').innerText;
                 const emailPattern = /^[^ ]+@[gmail]+\.[a-z]{2,3}$/;
+                const togglePassword = document.getElementById("togglePassword");
+                const togglePassword1 = document.getElementById("togglePassword1");
 
-                const cancelBtn = document.getElementById('trashCancel');
-                const deleteBtn = document.querySelector('.deleteAccount');
                 const saveChanges = document.getElementById('saveChanges');
-                const modallCancell = document.getElementById('modallCancell');
-                const modallCanc = document.getElementById('modallCanc');
-                const modalCancel = document.getElementById('modallCancel');
-                const modalCanc = document.getElementById('modalCanc');
+                const btnSignOut = document.querySelector('.btnSignOut');
+
+                // const tokenInput = document.getElementById("newtokeninput");
+                const saveValueBtn = document.querySelector(".save-Current-btn");
+                //now after fetching data display the blocks,remove the loader
+
+                document.querySelector(".loader-container").style.display = "none";
+                document.querySelector(".icon-nav").style.display = "block";
+                document.querySelector(".toolbar").style.display = "block";
+                document.querySelector(".content").style.display = "block";
+                function maskToken(token, visibleChars = 2) {
+                    if (!token || token.length <= visibleChars * 2) return token;
+
+                    const first = token.substring(0, visibleChars);
+                    const last = token.substring(token.length - visibleChars);
+                    const middle = '*'.repeat(token.length - (visibleChars * 2));
+
+                    return `${first}${middle}${last}`;
+                }
+
+                function toggleTokenVisibility(elementId, fullToken) {
+                    const element = document.getElementById(elementId);
+                    const current = element.textContent;
+
+                    if (current.includes('*')) {
+                        element.textContent = fullToken;
+                        element.classList.add('visible-token');
+                    } else {
+                        element.textContent = maskToken(fullToken);
+                        element.classList.remove('visible-token');
+                    }
+                }
+
                 if (userEmail !== '') {
                     emailInput.value = userEmail.trim() + '@gmail.com' //fill the email input text with the account name = tha gmail.com tag
                 }
-                //display the password of the currently logged in account
-                const userAcc = Array.from(userCredentials).find(user => user.User_Account === userEmail.trim());
-                // alert(userEmail)
-                const userPassword = Array.from(userCredentials).find(user => user.DbPassword === userAcc.DbPassword);
+                console.log(userCredentials)
+                document.querySelector('.myEmail').innerText = userCredentials.User_Account
+                //display the details of the currently logged in account
+                emailInput.value = userCredentials.Email
                 //store the value in the password field
-                passwordInput.value = userPassword.DbPassword
+                passwordInput.value = userCredentials.DbPassword
+                // tokenInput.value = maskToken(userCredentials.thirdPartyToken);
+                if (userCredentials.thirdPartyToken) {
+                    document.querySelector('.tokenType').innerText = 'Loyverse';
+                }
+                //set token in local storage
+                localStorage.setItem('tokenValue', userCredentials.thirdPartyToken);
                 //DISABLE THE EMAIL AND PASSWORD INPUT FIELD SO THAT ONE CANNOT EDIT IN IT
                 emailInput.disabled = true;
                 passwordInput.disabled = true;
-                newEmailInput.addEventListener('input', (event) => {
-                    const input = event.target.value
-                    const length = input.length;
-                    if (!input.match(emailPattern)) {
-                        emailInput.style.color = 'red'
-                    }
-                    else {
-                        emailInput.style.color = 'green'
-                    }
-                })
+                // tokenInput.disabled = true;
+                document.querySelectorAll('.fa-pen').forEach(editIcon => {
+                    editIcon.addEventListener('click', (e) => {
+                        const modal = document.getElementById('editData');
+                        // Get the parent span's ID (edit-icon element)
+                        const parentSpan = e.target.closest('.edit-icon');
+                        clickedId = parentSpan.id; // Now gets 'editIcon', 'eIcon', or 'editTokenIcon'
+                        // Position the modal below the clicked icon
+                        const iconRect = e.target.getBoundingClientRect();
+                        modal.style.top = `${iconRect.bottom + window.scrollY}px`;
+                        modal.style.left = `${iconRect.left + window.scrollX}px`;
 
-                function checkEmail() {//check if the email is in expected format
-                    if (!newEmailInput.value.match(emailPattern)) {
-                        return editFieldEmail.classList.add('invalid');
+                        // Show the modal
+                        modal.style.display = 'block';
+                    });
+                });
+
+                // Close modal when cancel button is clicked
+                document.getElementById('modallCancell').addEventListener('click', () => {
+                    document.getElementById('editData').style.display = 'none';
+                    reset()
+                });
+
+                // Toggle password visibility
+                document.getElementById('togglePassword1').addEventListener('click', function () {
+                    const passwordInput = document.getElementById('currentPassword');
+                    passwordInput.disabled = false;
+                    const type = passwordInput.type === 'password' ? 'text' : 'password';
+                    passwordInput.type = type;
+                    this.classList.toggle('fa-eye-slash');
+                    this.classList.toggle('fa-eye');
+                });
+                // Close modal when clicking outside (fixed)
+                document.addEventListener('mousedown', (e) => {
+                    const modal = document.getElementById('editData');
+                    const isClickInsideModal = modal.contains(e.target);
+                    const isEditIcon = e.target.closest('.edit-icon');
+
+                    if (!isClickInsideModal && !isEditIcon && modal.style.display === 'block') {
+                        modal.style.display = 'none';
+                        reset()
                     }
-                    editFieldEmail.classList.remove('invalid');
+                });
+
+                // onclick of eyelash
+                togglePassword.addEventListener("click", function (e) {
+                    // Toggle the type attribute
+                    const type = passwordInput.getAttribute("type") === "password" ? "text" : "password";
+                    passwordInput.setAttribute("type", type);
+
+                    // Toggle the icon
+                    this.classList.toggle("fa-eye-slash");
+                    this.classList.toggle("fa-eye");
+                });
+
+
+
+                const emailName = emailInput.value; //GET THE VALUE OF THE EMAIL
+                const email = emailName.split("@")[0]; //SPLIT TO GET THE NAME BEFORE THE @ TAG
+
+                //check if the email is in expected format
+                function checkEmail(newEmail) {
+                    if (!newEmail.match(emailPattern)) {
+                        return editField.classList.add("invalid");
+                    } else {
+                        editField.classList.remove("invalid");
+                        emailInput.value = newEmail;
+                    }
+                }
+                //fucntion to validate the passwords entered by the user on the modal
+                function validatePassword() {
+                    const currentPassword = currentPasswordInput.value; // get the value of the current password
+                    if (userCredentials.DbPassword === currentPassword) {
+                        saveValueBtn.innerText = "Done"
+                        editField.style.display = "block";
+                        //change inner text to enteremail if passwpord matches
+                        if (clickedId === "editIcon") {
+                            document.querySelector(".newValue").innerHTML = "Enter New Email";
+                            currentPasswordInput.value = "";
+                            currentPasswordInput.type = "email";
+                        }
+                        if (clickedId === "eIcon") {
+                            //change inner text to enter new password if password matches
+                            document.querySelector(".newValue").innerHTML = "Enter New Password";
+                            currentPasswordInput.value = "";
+                            currentPasswordInput.type = "password";
+                            togglePassword.classList.remove("hidden");
+                        }
+                    } else {
+                        currentPasswordInput.style.color = "red";
+                        notification("Password Do Not Match...");
+                        editField.style.display = "block";
+                        return;
+                    }
+
+
                 }
 
-                editIcon.addEventListener('click', () => {//OPEN EDIT MODAL ON EMAIL PEN CLICK TO ENTER THE CURRENT PASSWORD OF THE ACCOUNT
-                    editFieldCPassword.style.display = 'block';
+
+                // Get all dropdown items
+                const dropdownItems = document.querySelectorAll('.thirdPartytokenOptions .dropdown-item');
+                const tokenModal = document.querySelector('.token-modal');
+                const tokenType = document.querySelector('.tokenType');
+                const tokenSpan = document.querySelector('.tokenSpan');
+                const cancelTokenBtn = document.getElementById('canceltoken');
+
+                // Handle click on dropdown items
+                dropdownItems.forEach(item => {
+                    item.addEventListener('click', function (e) {
+                        e.preventDefault();
+
+                        // Get the token name from data attribute
+                        const tokenName = this.getAttribute('data-token-name');
+
+                        // Update the modal title with the selected token name
+                        tokenSpan.textContent = tokenName;
+
+                        // Update the dropdown span with the selected token name
+                        tokenType.textContent = tokenName;
+
+                        // Show the modal
+                        tokenModal.style.display = 'block';
+
+                        // Position the modal next to the dropdown
+                        const dropdown = document.getElementById('dropdownToken');
+                        const dropdownRect = dropdown.getBoundingClientRect();
+
+                        // Position modal to the right of the dropdown
+                        tokenModal.style.left = `${dropdownRect.width}px`;
+                        tokenModal.style.top = '0';
+                    });
                 });
-                eIcon.addEventListener('click', () => {//OPEN EDIT MODAL ON PASSWORD PEN CLICK
-                    // oldPasswordInput.value = passwordInput.value;
-                    editFieldOldPassword.style.display = 'block';
+
+                // Handle cancel button click
+                cancelTokenBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    tokenModal.style.display = 'none';
                 });
-                const emailName = emailInput.value;//GET THE VALUE OF THE EMAIL
-                const email = emailName.split('@')[0];//SPLIT TO GET THE NAME BEFORE THE @ TAG
-                saveValueBtnCPass.addEventListener('click', () => {//WHEN THE DONE BUTTON IS CLICKED,CLOSE THE MODAL SAVING THE VALUES INPUTTED
-                    //check if the current passwords match old and new password
-                    const currentPassword = currentPasswordInput.value// get the value of the current password
-                    const userPassword = Array.from(userCredentials).find(user => user.DbPassword === currentPassword);
-                    if (userPassword) {//If the password matches display the email dialog
-                        //  newEmailInput.value = emailInput.value;
-                        editFieldEmail.style.display = 'block';
-                        editFieldCPassword.style.display = 'none';
+
+                // Close modal when clicking outside
+                document.addEventListener('mousedown', function (e) {
+                    if (!e.target.closest('.dropdown') && !e.target.closest('.token-modal')) {
+                        tokenModal.style.display = 'none';
                     }
-                    else {
-                        currentPasswordInput.style.color = 'red';
-                        notification('Password Do Not Match...')
-                        editFieldCPassword.style.display = 'block';
+                });
+
+                // Close modal when cancel is clicked
+                document.getElementById('canceltoken').addEventListener('click', function () {
+                    const tokenModal = document.querySelector('.token-modal');
+                    tokenModal.style.display = 'none';
+                });
+
+                // Handle form submission
+                document.getElementById('submittoken').addEventListener('click', function () {
+                    const tokenValue = document.getElementById('newtokeninput').value;
+                    // Handle token submission here
+                    const tokenModal = document.querySelector('.token-modal');
+                    console.log('Token submitted:', tokenValue);
+                    // ?set the token value in local storage
+                    localStorage.setItem('tokenValue', tokenValue);
+
+                    tokenModal.style.display = 'none';
+                });
+
+                // Close modal when clicking outside
+                document.addEventListener('mousedown', function (e) {
+                    const tokenModal = document.querySelector('.token-modal');
+                    if (!tokenModal.contains(e.target) &&
+                        !document.querySelector('.dropdown-toggle').contains(e.target) &&
+                        tokenModal.style.display === 'block') {
+                        tokenModal.style.display = 'none';
+                    }
+                });
+
+
+                //function to update the field's data
+                function updatefields() {
+                    //check if the input type is email
+                    if (currentPasswordInput.type === "email" && currentPasswordInput.value !== "") {
+                        newEmail = currentPasswordInput.value;
+                        checkEmail(newEmail);
+                        //NOW BACK TO DEFAULT STTINGS
+                        reset();
+                    }
+                    if (currentPasswordInput.type === "password" && currentPasswordInput.value !== "") {
+                        passwordInput.value = currentPasswordInput.value;
+                        editField.style.display = "none";
+                        //NOW BACK TO DEFAULT STTINGS
+                        reset();
                     }
 
-                });
-                //HWEN ENTER IS CLICKED
-                editFieldCPassword.addEventListener('keydown', (event) => {//WHEN THE DONE BUTTON IS CLICKED,CLOSE THE MODAL SAVING THE VALUES INPUTTED
-                    if (event.key === 'Enter') {
-                        //check if the current passwords match old and new password
-                        const currentPassword = currentPasswordInput.value// get the value of the current password
-                        const userPassword = Array.from(userCredentials).find(user => user.DbPassword === currentPassword);
-                        if (userPassword) {//If the password matches display the email dialog
-                            //  newEmailInput.value = emailInput.value;
-                            editFieldEmail.style.display = 'block';
-                            editFieldCPassword.style.display = 'none';
+                }
+                editField.addEventListener("keydown", (event) => {
+                    //WHEN THE DONE BUTTON IS CLICKED,CLOSE THE MODAL SAVING THE VALUES INPUTTED
+                    if (event.key === "Enter") {
+                        event.preventDefault();
+                        if (saveValueBtn.innerText === "Next") {
+                            validatePassword();
+                        } else if (saveValueBtn.innerText === "Done") {
+                            updatefields();
                         }
-                        else {
-                            currentPasswordInput.style.color = 'red';
-                            notification('Password Do Not Match...')
-                            editFieldCPassword.style.display = 'block';
-                        }
-                        event.preventDefault()
-
                     }
                 });
-                saveValueBtnEmail.addEventListener('click', () => {//WHEN THE DONE BUTTON IS CLICKED,CLOSE THE MODAL SAVING THE VALUES INPUTTED
-                    checkEmail()
-                    emailInput.value = newEmailInput.value;
-                    editFieldEmail.style.display = 'none';
-                });
-                //when  enter is cliked
-                newEmailInput.addEventListener('keydown', (event) => {//WHEN THE DONE BUTTON IS CLICKED,CLOSE THE MODAL SAVING THE VALUES INPUTTED
-                    if (event.key === 'Enter') {
-                        checkEmail()
-                        emailInput.value = newEmailInput.value;
-                        editFieldEmail.style.display = 'none';
-                        event.preventDefault()
 
-                    }
+                function reset() {
+                    currentPasswordInput.type = "password";
+                    currentPasswordInput.value = "";
+                    document.querySelector(".newValue").innerHTML = "Enter Password";
+                    saveValueBtn.innerText = "Next"
+                    editField.style.display = "none";
+                }
 
-                });
-                saveOldBtnPass.addEventListener('click', () => {//WHEN THE DONE BUTTON IS CLICKED,CLOSE THE MODAL SAVING THE VALUES INPUTTED
-                    //check if the passwords match old and new password
-                    const oldPassword = oldPasswordInput.value// get the value of the old password
-                    const userOldPassword = Array.from(userCredentials).find(user => user.DbPassword === oldPassword);
-                    if (userOldPassword) {//If the password matches display the email dialog
-                        editFieldOldPassword.style.display = 'none';
-                        editFieldPassword.style.display = 'block';//open the dialog to enter new password
-                    }
-                    else {
-                        oldPasswordInput.style.color = 'red';
-                        notification('Password do not match ...')//show notification
-                        editFieldOldPassword.style.display = 'block';//remain open if password are not matching
+                saveValueBtn.addEventListener("click", (event) => {
+                    //WHEN THE DONE BUTTON IS CLICKED,CLOSE THE MODAL SAVING THE VALUES INPUTTED
+                    event.preventDefault();
+                    if (saveValueBtn.innerText === "Next") {
+                        validatePassword();
+                    } else if (saveValueBtn.innerText === "Done") {
+                        updatefields();
                     }
                 });
-                //when  enter is cliked
-                editFieldOldPassword.addEventListener('keydown', (event) => {//WHEN THE DONE BUTTON IS CLICKED,CLOSE THE MODAL SAVING THE VALUES INPUTTED
-                    if (event.key === 'Enter') {
-                        //check if the passwords match old and new password
-                        const oldPassword = oldPasswordInput.value// get the value of the old password
-                        const userOldPassword = Array.from(userCredentials).find(user => user.DbPassword === oldPassword);
-                        if (userOldPassword) {//If the password matches display the email dialog
-                            editFieldOldPassword.style.display = 'none';
-                            editFieldPassword.style.display = 'block';//open the dialog to enter new password
-                        }
-                        else {
-                            oldPasswordInput.style.color = 'red';
-                            notification('Password do not match ...')//show notification
-                            editFieldOldPassword.style.display = 'block';//remain open if password are not matching
-                        }
-                        event.preventDefault()
-
-                    }
-
-                });
-                saveNewBtnPass.addEventListener('click', () => {//WHEN THE DONE BUTTON IS CLICKED,CLOSE THE MODAL SAVING THE VALUES INPUTTED
-                    passwordInput.value = newPasswordInput.value;
-                    editFieldPassword.style.display = 'none';
-                });
-                //HWEN ENETER IS CLCIKED
-                newPasswordInput.addEventListener('keydown', (event) => {
-                    if (event.key === 'Enter') {
-                        passwordInput.value = newPasswordInput.value;
-                        editFieldPassword.style.display = 'none';
-                        event.preventDefault()
-
-                    }
-                });
-                // //WHEN THE DOCUMENT IS CLICKED ANYWHERE USING ENTER CLOSE ANY OPEN DIALOGS
-                // document.addEventListener('keydown', (event) => {
-                //     if (event.key === 'Enter') {
-                //         //close the confirm password dialog
-                //         editFieldOldPassword.style.display = 'none';
-                //         //close the enter new email dialog
-                //         editFieldEmail.style.display = 'none';
-                //         //close the confirm password dialog
-                //         editFieldCPassword.style.display = 'none';
-                //         //close the enter new  password dialog
-                //         editFieldPassword.style.display = 'none';
-                //     }
-                // })
                 //LOOP N THE CURRENCIES ARRAY AND CHECK THE CURRENCY WITH Y
                 const checkBaseCurrency = Array.from(newCurrencies).find(curr => curr.BASE_CURRENCY === 'Y')
                 if (checkBaseCurrency) {
                     document.querySelector('.baseCurr').innerHTML = checkBaseCurrency.Currency_Name
+                    baseCurrency = checkBaseCurrency._id
                 }
                 //WHEN BASE CURRENCY IS SELECTED
-                const overallContainer = document.getElementById('overallContainer');
-                const baseCurrDropdownContainer = document.getElementById('baseCurrDropdownContainer');
                 const baseCurrencyDrop = document.querySelectorAll('.curr-option');
-                //OPEN DROPDOWN ONCE THE SELECT BASECURRENCY IS CLICKED
-                overallContainer.addEventListener('click', () => {
-                    //display dropdown
-                    baseCurrDropdownContainer.style.display = 'block'
-                })
-                //IF USER CLICKED OUTSIDE ANYWHERE, IT REMOVES
-                document.addEventListener('mousedown', function handleClickOutsideBox(event) {
-                    if (!baseCurrDropdownContainer.contains(event.target)) {
-                        baseCurrDropdownContainer.style.display = 'none';
-                    }
-                });
-                //LOOP IN THE INTERVALS ARRAY AND UPON SELECTION AUTOFILL THE SELECTED INTERVAL TEXT
-                baseCurrencyDrop.forEach(option => {
+
+                //EVENT LISTENER FOR BASE CURRENCY DROPDOWN
+                baseCurrencyDrop.forEach((option, i) => {
                     option.addEventListener("click", function (event) {
-                        event.stopPropagation();
+                        event.preventDefault();
                         //GET THE SELECTED CURRENCY AND UPDATE THE TEXT WITH ITS VALUE
                         const baseCurrText = document.querySelector('.baseCurr');
                         baseCurrText.innerText = option.innerText;
-                        baseCurrency = option.innerText;
-                        baseCurrDropdownContainer.style.display = 'none'
+                        baseCurrency = option.querySelector(`.currencyId${i}`).textContent.trim();
 
                     })
                 })
-
                 //SAVE CHANGES TO DATABASE
                 saveChanges.addEventListener('click', (event) => {
                     event.preventDefault()
-                    const spinner = document.getElementById('spinner');
-                    // alert('sending data')
-                    spinner.style.display = 'block'; // location.href = loginForm.getAttribute('action')
-                    notification('Please Wait...')
-                    const userAccount = emailInput.value.split('@')[0];//SPLIT TO GET THE NAME BEFORE THE @ TAG/
+                    notification('Updating Data...')
+                    const userAccount = (emailInput.value).split("@")[0];//SPLIT TO GET THE NAME BEFORE THE @ TAG/
+                    const email = emailInput.value;//SPLIT TO GET THE NAME BEFORE THE @ TAG/
                     const myPassword = passwordInput.value;
+                    //GET WHATS IN LOCAL STORAGE
+                    const tokenValue = localStorage.getItem('tokenValue');
+                    // Handle token submission
+                    const tokenContainer = document.querySelector('.center-form');
+                    tokenContainer.style.display = 'none';
+
                     //  alert(myPassword)
                     fetch('/updateUserAccount', {
                         method: 'POST',
@@ -245,85 +339,112 @@ fetch('/getUserCredentials')
                         },
                         body: JSON.stringify({
                             userAccount,
+                            email,
                             myPassword,
-                            baseCurrency
+                            tokenValue,
+                            baseCurrency,
+                            sessionId
+                        })
+                    })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log('Update result:', data);
+                            if (data.success) {
+                                // Successful update (full or partial)
+                                const message = data.message || 'Update successful';
+                                notification(message);
+
+                                if (data.updates.credentials || data.updates.currency) {
+                                    // Notify user and sign out after a delay
+                                    setTimeout(() => {
+                                        notification('Signing out...');
+                                        location.href = '/';
+                                    }, 3000); // 3-second delay before signing out
+                                }
+                            } else {
+                                // Failed update
+                                const errorMsg = data.error || 'Failed to update';
+                                const partialMsg = data.partialSuccess ?
+                                    ' (partial updates were applied)' : '';
+
+                                notification(`${errorMsg}${partialMsg}. Please try again.`);
+                                return;
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Fetch error:', error);
+                            notification('Network error. Please check your connection and try again.');
+                        });
+
+                })
+                //SAVE CHANGES TO DATABASE
+                btnSignOut.addEventListener('click', (event) => {
+                    event.preventDefault()
+                    notification('Signing out...')
+                    fetch('/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            sessionId
                         })
                     })
                         .then(response => response.json())
                         .then(data => {
-                            // Handle the response data if needed
-                            if (data.isModified && data.isModifiedCurr) {
-                                spinner.style.display = 'none';
-                                notification('Directing To Page')
-                                location.href = '/'
+                            if (data.loggedOut === true) {
+                                notification('Logged out successfully! Redirecting...');
+                                setTimeout(() => {
+                                    window.location.href = "/"; // Redirect to the login page after delay
+                                    localStorage.clear(); // Clear all local storage items
+                                }, 3000); // 3-second delay before redirecting
+                            } else {
+                                console.log('Logout failed. Please try again.');
                             }
-                            // else if (data.isModified === false && data.isModifiedCurr === false) {
-                            //     alert('zvaita')
-                            // }
-                            else {
-                                notification('Failure to update..Try Again')
-                                passwordInput.style.color = 'red';
-                                location.href = '/userAccount'
-                            }
-
                         })
-
-                        .catch(error => {
-                            console.error(error);
-                            notification('An error occurred while updating. Please try again...');
-                            location.reload()
-                        })
-
+                        .catch(error => console.error("Logout error:", error));
                 })
-                //WHEN THE CANCEL BUTTON IS CLICKED
 
-                modallCancell.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    currentPasswordInput.value = ''
-                    editFieldCPassword.style.display = 'none'
-                })
-                modalCancel.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    newEmailInput.value = ''
-                    editFieldEmail.style.display = 'none'
-
-                })
-                modalCanc.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    oldPasswordInput.value = '';
-                    editFieldOldPassword.style.display = 'none'
-
-                })
-                modallCanc.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    newPasswordInput.value = '';
-                    editFieldPassword.style.display = 'none'
-
-                })
                 //WHEN THE DELETE BUTTON IS CLICKED
-                const deleteAccount = document.querySelector('.deleteAccount');
-                const deleteAccountModal = document.getElementById('deleteAccountiD');
-                const yesDeleteAccount = document.getElementById('yesDelete');
-                const noDeleteAccount = document.getElementById('noDelete');
-                const closeDelete = document.getElementById('closeDelete');
+                const deleteTrigger = document.querySelector('.deleteAccount');
+                const deleteModal = document.getElementById('deleteAccountModal');
+                const noDeleteBtn = document.getElementById('noDelete');
 
-                deleteAccount.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    //display the delte modal
-                    deleteAccountModal.style.display = 'block'
+                // Show modal when delete is clicked
+                deleteTrigger.addEventListener('click', function (e) {
+                    e.preventDefault(); // Prevent immediate close
+                    e.stopPropagation(); // Stop the click event from propagating
+                    deleteModal.style.display = 'block';
+                });
 
-                })
+                // Close modal when clicking No or outside
+                noDeleteBtn.addEventListener('click', closeModal);
+                document.addEventListener('click', function (e) {
+                    if (!deleteModal.contains(e.target) && e.target !== deleteTrigger) {
+                        closeModal();
+                    }
+                });
+
+                function closeModal() {
+                    deleteModal.style.display = 'none';
+                }
+
                 //when the yes button is clicked
-                yesDeleteAccount.addEventListener('click', (event) => {
+                document.getElementById('yesDelete').addEventListener('click', (event) => {
+                    event.preventDefault();
                     const emailName = emailInput.value;
-                    const email = emailName.split('@')[0];
                     fetch('/deleteUserAccount', {
                         method: 'DELETE',
                         headers: {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            email,
+                            emailName,
                         })
                     })
                         .then(response => {
@@ -331,16 +452,7 @@ fetch('/getUserCredentials')
                             spinner.style.display = 'none';
                             if (response.ok) {
                                 //REMOVE ZVESE ZVIRI MUMA LOCAL HOST
-                                localStorage.removeItem("firstDate"); //DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                localStorage.removeItem("lastDate");
-                                localStorage.removeItem('expCurrentPage');
-                                localStorage.removeItem('incomeCurrPage')
-                                localStorage.removeItem("payInCategory")
-                                localStorage.removeItem("payOutCategory")
-                                localStorage.removeItem('totalIncomePerCategory')
-                                localStorage.removeItem('itemsPerPage');
-                                localStorage.removeItem('payOutcategoryName')
-                                localStorage.removeItem('totalExpensesPerRange')
+                                localStorage.clear(); // Clear all local storage items
                                 notification('Directing To Page');
                                 location.href = '/register'
                                 return response.json();
@@ -349,8 +461,6 @@ fetch('/getUserCredentials')
                                 notification('Failure to delete..Try Again')
                                 passwordInput.style.color = 'red';
                                 location.href = '/userAccount'
-
-                                // throw new Error('Error checking database name');
                             }
 
                         })
@@ -364,41 +474,12 @@ fetch('/getUserCredentials')
                             location.reload()
                         })
                 })
-                //when the no button is clicked
-                noDeleteAccount.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    deleteAccountModal.style.display = 'none'//remove the modal
-                })
-                //when the cancell icon isclicked
-                //when the no button is clicked
-                closeDelete.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    deleteAccountModal.style.display = 'none'//remove the modal
-                })
-                //WHEN THE USER CLICKS OUTSIDE THE MODAL
-                window.addEventListener('click', (event) => {
-                    if (event.target === editFieldEmail) {
-                        editFieldEmail.style.display = 'none';
-                    }
-                    else if (event.target === editFieldPassword) {
-                        editFieldPassword.style.display = 'none';
-                    }
-                    else if (event.target === editFieldCPassword) {
-                        editFieldCPassword.style.display = 'none';
-                    }
-                    else if (event.target === editFieldOldPassword) {
-                        editFieldOldPassword.style.display = 'none';
-                    }
-                    else if (event.target === deleteAccountModal) {
-                        deleteAccountModal.style.display = 'none';
-                    }
-                });
+
             })
             .catch(error => console.error('Error fetching user credentials:', error));
         console.log(newCurrencies); // do something with the currencies array
     })
     .catch(error => console.error('Error fetching user credentials:', error));
-console.log(userCredentials); // do something with the credentials array
 function notification(message) {
     const notificationBlock = document.getElementById('notificationBlock');
     const notification = document.createElement('div');
