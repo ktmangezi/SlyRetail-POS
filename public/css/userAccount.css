@@ -33,7 +33,7 @@ p {
 .card {
     margin-left: 80px;
     width: 380px;
-    height: 512px;
+    /* height: 512px; */
     background-color: #ffffff;
     /* margin: 0 auto; */
     margin-top: 50px;
@@ -74,6 +74,7 @@ p {
 .user_details h3 {
     margin-top: 10px;
     text-align: center;
+    font-size: 15px !important;
 }
 
 .card_count {
@@ -186,144 +187,102 @@ select {
 
 }
 
+/* Modal container (hidden by default) */
 .modall {
     display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 999;
-}
-
-.modal-contentt {
     position: absolute;
-    top: 59%;
-    left: 23%;
-    transform: translate(-50%, -50%);
-    background-color: #fff;
-    padding: 9px;
-    border-radius: 5px;
-    width: 19%;
+    /* Position relative to the clicked icon */
+    z-index: 1000;
+    /* Ensure it appears above other elements */
+    width: 300px;
+    /* Medium width */
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 15px;
+    animation: fadeIn 0.3s ease;
 }
 
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
 
-.modall button {
-    background-color: #4CAF50;
-    color: #fff;
-    padding: 5px 8px;
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Modal content styling */
+.modal-contentt {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Close button (top-right) */
+#modallCancell {
+    position: absolute;
+    right: 1px;
+    top: -8px;
+    cursor: pointer;
+    color: red;
+}
+
+/* Password input container */
+.modal-contentt>div {
+    position: relative;
+}
+
+/* Eye icon inside password input */
+#togglePassword1 {
+    position: absolute;
+    right: 10px;
+    top: 71%;
+    transform: translateY(-50%);
+    cursor: pointer;
+}
+
+/* Button styling */
+.save-Current-btn {
+    background: #4CAF50;
+    color: white;
     border: none;
+    padding: 8px 12px;
     border-radius: 4px;
     cursor: pointer;
-    margin-top: 7px;
-    margin-left: 35%;
-}
-
-.modall {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 999;
-}
-
-.modal-contentt {
-    position: absolute;
-    top: 59%;
-    left: 19%;
-    transform: translate(-50%, -50%);
-    background-color: #fff;
-    padding: 9px;
-    border-radius: 5px;
-    width: 19%;
-}
-
-.modal-cont {
-    position: absolute;
-    top: 65%;
-    left: 19%;
-    transform: translate(-50%, -50%);
-    background-color: #fff;
-    padding: 9px;
-    border-radius: 5px;
-    width: 19%;
-}
-
-#modallCancell,
-#modallCancel {
-    position: absolute;
-    color: red;
-    top: 51%;
-    left: 27%;
-    cursor: pointer;
-}
-
-#modalCanc,
-#modallCanc {
-    position: absolute;
-    color: red;
-    top: 57%;
-    left: 27%;
-    cursor: pointer;
-}
-
-
-.modall button {
-    background-color: #4CAF50;
-    color: #fff;
-    padding: 5px 8px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-top: 7px;
-    margin-left: 35%;
 }
 
 /* DELETE ACCOUNT MODAL */
-#deleteAccountiD {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 999;
+/* Modal styling */
+.delete-modal {
+    min-width: 250px;
+    animation: fadeIn 0.3s ease;
 }
 
-.deleteAccountContent {
-    position: absolute;
-    top: 75%;
-    left: 19%;
-    transform: translate(-50%, -50%);
-    background-color: #fff;
-    padding: 14px;
-    border-radius: 5px;
-    width: 21%;
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-#closeDelete {
-    position: absolute;
-    color: red;
-    top: 69%;
-    left: 28%;
-    cursor: pointer;
+.deleteAccount:hover {
+    color: #ff4444;
+    /* Change trash icon color on hover */
 }
 
-#deleteAccountiD button {
-    background-color: #4CAF50;
-    color: #fff;
-    padding: 5px 8px;
-    border: none;
-    width: 60px;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-top: 7px;
-    margin-left: 15%;
+.deleteAccount:hover p {
+    color: #ff4444;
+    /* Change text color on hover */
 }
 
 #overallContainer {
@@ -401,4 +360,27 @@ footer {
     background-color: #f5f5f5;
     padding: 15px;
     text-align: center;
+}
+
+input::placeholder {
+    color: lightgrey;
+    font-size: 18px;
+    letter-spacing: 2px;
+}
+
+input[type="email"],
+input[type="password"],
+input[type="text"],
+input[type="input"] {
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    border-bottom: 2px solid #1d1d1d;
+    outline: none;
+    background-color: #ffff;
+    padding: 8px;
+    margin: -1px;
+    width: 97%;
+    /* user-select: none; */
+    /* pointer-events: none; */
 }
