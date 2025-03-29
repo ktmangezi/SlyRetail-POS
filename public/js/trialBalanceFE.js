@@ -515,11 +515,15 @@ fetch('/currencies')
                                         endDate = new Date(lastNewDate);
                                         startDate = new Date(firstNewDate);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
                                     }
+                                    const momntStartDate1 = moment.tz(startDate, "Africa/Harare").startOf('day'); // Midnight in Zimbabwe
+                                    const momntEndDate1 = moment.tz(endDate, "Africa/Harare").endOf('day'); // end of day  in Zimbabwe
 
-                                    let theDate = moment(startDate);//convert to the format dd/mm/yy using moment
-                                    let theEndDate = moment(endDate);//convert to the format dd/mm/yy using moment
-                                    theDate = theDate.format('DD/MM/YYYY');
-                                    theEndDate = theEndDate.format('DD/MM/YYYY');
+                                    // Convert back to JavaScript Date objects (optional, only if needed)
+                                    startDate = momntStartDate1.toDate();
+                                    endDate = momntEndDate1.toDate();
+
+                                    let theDate = startDate.format('DD/MM/YYYY');
+                                    let theEndDate = endDate.format('DD/MM/YYYY');
 
                                     const currencies = Array.from(newCurrencies).find(newCurrency => newCurrency.BASE_CURRENCY === 'Y');//find the base currency
                                     let baseCurrName
@@ -553,8 +557,8 @@ fetch('/currencies')
                                                 const parts = date.split("/");
                                                 const formattedDate = parts[1] + "/" + parts[0] + "/" + parts[2];
                                                 const formattedDates2 = new Date(formattedDate);
-
-                                                if (formattedDates2.getTime() <= endDate.getTime()) {//CODE FOR 
+                                                const formattedDates2Zim = moment.tz(formattedDates2, "Africa/Harare").startOf('day').toDate();
+                                                if (formattedDates2Zim.getTime() <= endDate.getTime()) {//CODE FOR 
                                                     //TIRIMO CHECK THE TOTALS OF THE AVAILABLE CATEGORIES
                                                     if (each.category === data.CashFlowCategory && data.CashFlowType === 'Pay in') {
                                                         totalPayInCatAmnt1 = parseFloat(totalPayInCatAmnt1) + parseFloat(data.CashFlowCashEquiv);
