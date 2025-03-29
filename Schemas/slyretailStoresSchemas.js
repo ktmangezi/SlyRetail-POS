@@ -1,14 +1,21 @@
-const { Transaction, Double } = require('mongodb');
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import { type } from 'os';
+// Suppress the deprecation warning
+mongoose.set('strictQuery', true);
 
-// Define the CredentialsSchema
+// Define the schema for the Tax (both VAT and ZTE)
 const StoresSchema = new mongoose.Schema({
-    // Add more fields as needed
+    StoreName: {
+        type: String,
+    },
+    StoreId: {
+        type: String
+    }
 });
 
-module.exports = {
-    StoresSchema
+const StoresModel = (db) => {
+    // Create the model with the specific connection
+    return db.model('stores', StoresSchema);
 };
-console.log('StoresSchema:', StoresSchema);
-
+export { StoresModel };
 
