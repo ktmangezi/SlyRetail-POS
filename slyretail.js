@@ -25,14 +25,17 @@ import { payOutData } from './Controllers/payOutController.js';
 import { getTrialBalanceData } from './Controllers/trialBalanceController.js';
 import { getAccountingPeriodDetails } from './Controllers/accountingPeriodController.js';
 import { updateAccountingPeriod } from './Controllers/accountingPeriodController.js';
+import { saveToken, checkIfTokenExists, getUserCredentials, updateUserAccount, deleteDatabase } from './Controllers/credentialsController.js';
+import { getStores, saveDataToDb, nameOfStoreAndPOSdeviceName, getDatabaseName } from './Controllers/getLoyverseDataController.js';
 import {
+
   updateCashFlowType, getCashFlowArray, updateCashFlowDate, updateCashFlowShift, updateCashFlowInvoice, updateCashFlowDescription, updateCashFlowCategory,
   updateCashFlowCurrency, updateCashFlowAmount, updateCashFlowRate, deleteCashFLow, insertCashFlowData, updateCashFlowData, updateCashFlowTax, saveCashFlowData
 } from './Controllers/cashFlowsController.js';
 import { getadvancedHeaderStatusArray, saveHeaderStatusAdv } from './Controllers/advaCashMngmentHeadersSettingsController.js';
 import { getpayInHeaderStatusArray, saveHeaderStatusPayIn } from './Controllers/payInHeadersSettingsController.js';
 import { getpayOutHeaderStatusArray, saveHeaderStatusPayOut } from './Controllers/payOutHeadersSettingsController.js';
-import { exportingArray } from './Controllers/exportImportController.js';
+import { exportingArray, arrayForImport } from './Controllers/exportImportController.js';
 import { insertCategory, getCategories, updateCategoryRow, deleteCategory, getCategoryTotals, updateAssignedCategories } from './Controllers/categoriesController.js';
 
 
@@ -60,6 +63,64 @@ app.use(session({
     maxAge: 60 * 60 * 3000  // Set the session duration to 1 hour (in milliseconds)
   }
 }));
+
+
+const activeSessions = new Map(); // Tracks sessions by database name
+
+app.use((req, res, next) => {
+  if (req.session && req.session.id) {
+    const dbName = req.session.myDatabase;
+    if (!dbName) {
+      return next();
+    }
+
+    const existingSessionId = activeSessions.get(dbName);
+
+    // Case 1: No existing session for this database
+    if (!existingSessionId) {
+      activeSessions.set(dbName, req.session.id);
+      req.session.loginTime = Date.now();
+      console.log(`New session created for ${dbName}: ${req.session.id}`);
+      return next();
+    }
+
+    // Case 2: This is the existing valid session
+    if (existingSessionId === req.session.id) {
+      // console.log(`Existing valid session for ${dbName}`);
+      return next();
+    }
+
+    // Case 3: Duplicate session detected
+    return req.session.destroy((err) => {
+      if (err) {
+        console.error('Session destruction error:', err);
+        return res.status(500).json({ error: 'server_error' });
+      }
+      return res.status(401).json({
+        error: 'duplicate_session',
+        message: 'Only one session allowed per database'
+      });
+    });
+  }
+
+  next();
+});
+//===========================================================================
+app.get('/session-info', (req, res) => {
+  if (!req.session || !req.session.loginTime) {
+    return res.json({ status: 'no_session' });
+  }
+  const loginTime = req.session.loginTime;
+  const expiresAt = loginTime + req.session.cookie.maxAge;
+  const remainingTime = expiresAt - Date.now();
+
+  res.json({
+    status: 'active',
+    expiresAt: new Date(expiresAt).toISOString(),
+    remainingTime: remainingTime,
+    loginTime: new Date(loginTime).toISOString()
+  });
+});
 //===================================================================================
 // Render login page using EJS template
 app.get('/', (req, res) => {
@@ -76,15 +137,15 @@ app.post('/signinsignup', async (req, res) => {
   const { buttonContent, dbName, email, myPassword } = req.body;
   // Run the sign-up/sign-in logic
   try {
-    const { loggedInStatus } = await signUpSignIn(req, dbName, email, myPassword, buttonContent) //THIS STAGE SHOULD WAIT FOR THE RESPONSE FROM THE FUNCTIONS WITH THE loggedInStatus, NO NEXT LINE SHOULD RUN WITH A BLANK loggedInStatus
+    const { loggedInStatus, existingthirdPartyToken } = await signUpSignIn(req, dbName, email, myPassword, buttonContent); //THIS STAGE SHOULD WAIT FOR THE RESPONSE FROM THE FUNCTIONS WITH THE loggedInStatus, NO NEXT LINE SHOULD RUN WITH A BLANK loggedInStatus
     //THIS WHERE YOU WILL SHOW THE NEXT PAGE TO GO TO WHE SUCCESSFULLY LOGED IN
     if (loggedInStatus === "True") {
       // req.session.dbName = { username: dbName };  // Store user info in the session
-      res.json({ loggedInStatus: "True" }); //then let the user know
+      res.json({ loggedInStatus: "True", existingthirdPartyToken }); //then let the user know
     }
     //THIS WHERE YOU WILL SHOW THE SAME HOME PAGE WHEN UNSUCCESSFUL IN LOGING IN
     if (loggedInStatus !== "True") {
-      res.json({ loggedInStatus: loggedInStatus }); //then let the user know
+      res.json({ loggedInStatus: loggedInStatus, existingthirdPartyToken }); //then let the user know
     }
   } catch (error) {
     console.error("Error in sign-in/sign-up", error);
@@ -97,14 +158,13 @@ app.post('/signinsignup', async (req, res) => {
 app.get('/dbname', async (req, res) => {
   try {
     const actualSessionId = req.cookies['connect.sid']; // Access the cookie directly
-    //Remove the 's:' prefix and return only the actual session ID
+    // Remove the 's:' prefix and return only the actual session ID
     const sessionId = actualSessionId.split(':')[1].split('.')[0];
-    if (req.sessionID === sessionId) {
-      // console.log("iam the new1111 " + req.session.myDatabase)
-      const dbName = req.session.myDatabase
-      res.json({ dbName });
+    const { credentials } = await getUserCredentials(req, sessionId);
+    if (credentials) {
+      const dbName = credentials.User_Account
+      res.json({ dbName: dbName });
     }
-
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -124,13 +184,64 @@ app.get('/advanceCashMngmnt', async (req, res) => {
     res.status(500).json({ error: "internal server error" });
   }
 });
-//====================================================================================================================================
-// app.get("/userAccount", async (req, res,) => {
-
-//   const { currencies } = await signUpSignIn()
-//   const database = dbName
-//   res.render('userAccount', { currencies, database });
+//========================================================================================================
+app.get('/thirdPartyToken', async (req, res) => {
+  try {
+    res.render('thirdPartyToken');
+  } catch (error) {
+    console.error("saving token", error);
+    res.status(500).json({ error: "internal server error" });
+  }
+});
+// /======================================================================================
+app.get('/getStores', async (req, res) => {
+  try {
+    // Fetch the token (assuming you have a function to get the token)
+    const actualSessionId = req.cookies['connect.sid']; // Access the cookie directly
+    //Remove the 's:' prefix and return only the actual session ID
+    const sessionId = actualSessionId.split(':')[1].split('.')[0];
+    const { storeNames } = await getStores(req, sessionId); // You need to implement `getToken`
+    res.json(storeNames);
+  } catch (err) {
+    console.error('Error fetching stores:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+//==-------------------------------------------------------------------------------------------------------------------------
+// app.get('/getShifts', async (req, res) => {
+//   try {
+//     // Fetch the token (assuming you have a function to get the token)
+//     const actualSessionId = req.cookies['connect.sid']; // Access the cookie directly
+//     //Remove the 's:' prefix and return only the actual session ID
+//     const sessionId = actualSessionId.split(':')[1].split('.')[0];
+//     const { allShifts } = await getShifts(req, sessionId); // You need to implement `getToken`
+//     res.json(allShifts);
+//   } catch (err) {
+//     console.error('Error fetching stores:', err);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
 // });
+//====================================================================================================================================
+app.get("/userAccount", async (req, res,) => {
+  const actualSessionId = req.cookies['connect.sid']; // Access the cookie directly
+  //Remove the 's:' prefix and return only the actual session ID
+  const sessionId = actualSessionId.split(':')[1].split('.')[0];
+  const { currencies } = await advCashMngmnt(req, sessionId);
+  res.render('userAccount', { currencies });
+});
+///=============================================================================================
+app.get('/getUserCredentials', async (req, res) => {
+  try {
+    const actualSessionId = req.cookies['connect.sid']; // Access the cookie directly
+    // Remove the 's:' prefix and return only the actual session ID
+    const sessionId = actualSessionId.split(':')[1].split('.')[0];
+    const { credentials } = await getUserCredentials(req, sessionId);
+    res.json({ credentials: credentials }); // Ensure the response is an object with a 'credentials' property
+  } catch (err) {
+    console.error('Error fetching credentials:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 // //======================================================================================================
 app.get('/currencies', async (req, res) => {
   try {
@@ -189,13 +300,84 @@ app.get('/incomeCategories', async (req, res) => {
 //     res.status(500).json({ error: "internal server error" });
 //   }
 // });
+//=========================================================================================
+app.post('/checkIfTokenExists', async (req, res) => {
+  try {
+    const { token } = req.body;
+    const { doExist } = await checkIfTokenExists(req, token)
+    res.status(200).json({
+      doExist: doExist,
+    });
+  } catch (error) {
+    console.error('Error during checking token:', error);
+    res.status(500).send("An error occurred during checking token.");
+  }
+});
+//=========================================================================================
+app.post('/saveToken', async (req, res) => {
+  try {
+    const { token, sessionId } = req.body;
+    const { isSaved } = await saveToken(req, token, sessionId)
+    res.status(200).json({
+      isSaved: isSaved,
+    });
+  } catch (error) {
+    console.error('Error during logout:', error);
+    res.status(500).send("An error occurred during logout.");
+  }
+});
+//========================================================================================
+app.post('/updateUserAccount', async (req, res) => {
+  const { userAccount, email, myPassword, tokenValue, baseCurrency, sessionId } = req.body;
+
+  try {
+    const { success, details: { credentialsUpdated, currencyUpdated }, error } = await updateUserAccount(req, userAccount, email, myPassword, tokenValue, baseCurrency, sessionId);
+    if (success) {
+      res.status(200).json({
+        success: true,
+        updates: {
+          credentials: credentialsUpdated,
+          currency: currencyUpdated
+        },
+        message: getSuccessMessage(credentialsUpdated, currencyUpdated)
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: error || 'Update failed',
+        partialSuccess: credentialsUpdated || currencyUpdated,
+        updates: {
+          credentials: credentialsUpdated,
+          currency: currencyUpdated
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Server error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      details: error.message
+    });
+  }
+});
+
+// Helper function for success messages
+function getSuccessMessage(credentialsUpdated, currencyUpdated) {
+  if (credentialsUpdated && currencyUpdated) {
+    return 'Both credentials and currency were updated successfully';
+  }
+  if (credentialsUpdated) {
+    return 'Credentials were updated successfully';
+  }
+  return 'Currency was updated successfully';
+}
 //========================================================================================
 // endpoint for signing out
 app.post('/logout', async (req, res) => {
   try {
     const { sessionId } = req.body;
-    console.log(sessionId + "received")
-    const { loggedOut } = await logout(req, sessionId)
+    const { loggedOut } = await logout(req, sessionId, activeSessions)
     res.status(200).json({
       loggedOut: loggedOut,
     });
@@ -219,7 +401,8 @@ app.post('/defaultDisplayThePaginationWay', async (req, res) => {
     const searchInput = (req.body.searchInput);
     const payOutSearchInput = (req.body.payOutSearchInput);
     const sessionId = (req.body.sessionId);
-    const { data } = await getCashFlowArray(req, startDate, endDate, pageSize, page, payInFilterCategory, payOutFilterCategory, advancedSearchInput, searchInput, payOutSearchInput, sessionId);
+    const selectedStoreName = (req.body.selectedStoreName);
+    const { data } = await getCashFlowArray(req, startDate, endDate, pageSize, page, payInFilterCategory, payOutFilterCategory, advancedSearchInput, searchInput, payOutSearchInput, sessionId, selectedStoreName);
 
     // Send a response back to the client
     res.json(data);
@@ -457,8 +640,6 @@ app.delete('/delete', async (req, res) => {
   try {
     const { data } = await deleteCashFLow(req, startDate, endDate, pageSize, page, advancedSearchInput, checkedRowsId, sessionId)
     // Send a response back to the client
-    console.log('data222')
-    console.log(data)
     res.json(data);
   }
   catch (error) {
@@ -575,7 +756,6 @@ app.get('/getCategories', async (req, res) => {
     //Remove the 's:' prefix and return only the actual session ID
     const sessionId = actualSessionId.split(':')[1].split('.')[0];
     const { allCashFlowCategories } = await getCategories(req, sessionId);
-    // console.log(allCashFlowCategories +'sly')
     res.json(allCashFlowCategories);
   } catch (err) {
     console.error('Error fetching categories :', err);
@@ -587,7 +767,6 @@ app.post('/UpdateCashFlowData', async (req, res) => { // CONNECT THE API END POI
   const { itemsToProcess } = req.body
   try {
     const { amUpdated, insertedDocuments } = await updateCashFlowData(itemsToProcess)
-    console.log(amUpdated)
     res.status(200).json({
       amUpdated: amUpdated,
       documents: insertedDocuments
@@ -605,8 +784,6 @@ app.post('/insertCategory', async (req, res) => { // CONNECT THE API END POINT
   const { categoryToDb, sessionId } = req.body;
   try {
     const { isSaving, insertedCategories } = await insertCategory(req, categoryToDb, sessionId)
-    // console.log(insertedCategories)
-    // console.log(isSaving)
     res.status(200).json({
       isSaving: isSaving,
       documents: insertedCategories
@@ -661,8 +838,6 @@ app.delete('/deleteCategoriesRows', async (req, res) => {
   const { checkedRowsId, sessionId } = req.body;
   try {
     const { amDeleted } = await deleteCategory(req, checkedRowsId, sessionId)
-    console.log(amDeleted)
-
     res.status(200).json({
       amDeleted: amDeleted,
     });
@@ -703,7 +878,6 @@ app.get('/details', async (req, res) => {
     //Remove the 's:' prefix and return only the actual session ID
     const sessionId = actualSessionId.split(':')[1].split('.')[0];
     const { details } = await getAccountingPeriodDetails(req, sessionId);
-    // console.log(details)
     res.json(details);
   } catch (err) {
     console.error('Error fetching accounting details:', err);
@@ -749,8 +923,11 @@ app.get('/TrialBalance', async (req, res) => {
   //Remove the 's:' prefix and return only the actual session ID
   const sessionId = actualSessionId.split(':')[1].split('.')[0];
   const { isocode, totalCostIncome, totalCostExpenses } = await getTrialBalanceData(req, sessionId)
-  const accountName = dbName
-  res.render("trialBalance", { isocode, accountName, totalCostIncome, totalCostExpenses });
+  const { credentials } = await getUserCredentials(req, sessionId);
+  if (credentials) {
+    const accountName = credentials.User_Account
+    res.render("trialBalance", { isocode, accountName, totalCostIncome, totalCostExpenses });
+  }
 });
 
 //===========================================================================================
@@ -876,7 +1053,67 @@ app.delete('/deletePaymentTypeRows', async (req, res) => {
     res.status(500).json({ error: 'An error occurred' });
   }
 })
+//===========================================================================================================
+//DELETE USER ACCOUNT
+app.delete('/deleteUserAccount', async (req, res) => { // CONNECT THE API END POINT
+
+  const email = req.body.email;
+  try {
+    const { amDeleted } = await deleteDatabase(email)
+    res.status(200).json({
+      amDeleted: amDeleted
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'An error occurred' });
+  }
+
+});
 //================================================================================================
+// ?WEBHOOK ENDPOINT
+// app.post("/api/webhook/shifts", async (req, res) => {
+//   try {
+//     console.log("==================== WEBHOOK RECEIVED ====================");
+//     const webhook = req.body;
+
+//     // Validate the webhook payload
+//     if (!webhook || !webhook.shifts) {
+//       throw new Error("Invalid webhook payload");
+//     }
+//     console.log(webhook);
+
+//     // Extract cash movements from each shift
+//     let allShifts = webhook.shifts.map(shift => shift.cash_movements).flat();
+
+//     // Get database details (POS device name, store name, etc.)
+//     const merchant_id = webhook.merchant_id;
+//     const result = await getDatabaseName(req, webhook.shifts, merchant_id);
+//     if (!result || !result.databaseName || !result.posDeviceName || !result.storeName) {
+//       throw new Error("Invalid database details");
+//     }
+
+//     // Save data to the database
+//     let db = ''; // Initialize your database connection here
+//     const { isSaving } = await saveDataToDb(req, result.databaseName, result.posDeviceName, result.storeName, allShifts, db);
+
+//     if (!isSaving) {
+//       throw new Error("Failed to save data to the database");
+//     }
+//     // Send the updated data to the frontend
+//     res.status(200).json({
+//       success: true,
+//       message: "Webhook received and data processed",
+//     });
+//   } catch (error) {
+//     console.error("Error processing webhook:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Error processing webhook",
+//       error: error instanceof Error ? error.message : "Unknown error",
+//     });
+//   }
+// });
+//=================================================================================================================
 
 app.listen(2000, function () {
   console.log("Server started on port 2000");
