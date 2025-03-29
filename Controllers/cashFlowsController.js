@@ -1,14 +1,16 @@
 import moment from "moment-timezone";
+import axios from "axios";
 import { ObjectId } from 'mongodb';
 import { CashflowModel } from '../Schemas/slyretailCashflowSchemas.js';
+import { StoresModel } from '../Schemas/slyretailStoresSchemas.js';
 import { CurrenciesModel } from '../Schemas/slyretailCurrenciesSchemas.js';
 import { CashflowCategoriesModel } from '../Schemas/slyretailCategoriesSchemas.js';
 import { connectDB } from '../Schemas/slyretailDbConfig.js';
+import { CredentialsModel } from '../Schemas/slyretailLoginSchemas.js';
 
 //=================================================================================================================================================
 //THIS CALCULATES ALL THE CASH INFLOWS AND OUTFLOWS FOR A PARTICULAR PERIOD AND PRESENTS IT TO THE USER ON AN ASCENDING ORDER
 let cashFlows = []
-let anyUpdateSuccessful=''
 let amUpdated = false;
 let modifiedCount;
 let amDeleted = false;
@@ -19,63 +21,77 @@ let updatedDocuments = [];
 let insertedCategories = [];
 let databaseName = ""
 let signingCriteria = ""
-export async function getCashFlowArray(req, startDate, endDate, pageSize, page, payInFilterCategory, payOutFilterCategory, advancedSearchInput, searchInput, payOutSearchInput, sessionId) {
+let anyUpdateSuccessful = ''
+
+export async function getCashFlowArray(req, startDate, endDate, pageSize, page, payInFilterCategory, payOutFilterCategory, advancedSearchInput, searchInput, payOutSearchInput, sessionId, selectedStoreName) {
     try {
         const db = await connectDB(req, databaseName, signingCriteria, sessionId);
-        if (db) {
-            // Create the model with the specific connection
-            const myCashflowModel = CashflowModel(db);
-            const myCurrenciesModel = CurrenciesModel(db);
-            cashFlows = await myCashflowModel.find()
-            // Always Sort the array by 'income date' in ascending order, when the user want to change this it is up to her
-            //and the settings are to be kept under local storage
-            cashFlows.sort((a, b) => {
-                const [dayA, monthA, yearA] = a.CashFlowDate.split('/');
-                const [dayB, monthB, yearB] = b.CashFlowDate.split('/');
-                return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
-            });
+        if (!db) {
+            throw new Error('Failed to connect to the database');
+        }
+        // Create the model with the specific connection
+        const myCashflowModel = CashflowModel(db);
+        const myCurrenciesModel = CurrenciesModel(db);
+        cashFlows = await myCashflowModel.find();
 
-            let totalExpensesPerRange = 0;
-            let totalIncomePerRange = 0;
-            let advSearchedInputTotal = 0;
-            let payInSearchedInputTotal = 0;
-            let payOutSearchedInputTotal = 0;
-            let totalExpensesPerRangeAdv = 0;
-            let totalIncomePerRangeAdv = 0;
-            let theBeforeIncome = 0
-            let theBeforeExpenses = 0
-            let cashFlowArray = []
-            let payOutcashFlowArray = []
-            let allCashFlows = []
-            let payOutsearchedInputArray = []
-            let payInsearchedInputArray = []
-            let advSearchedInputArray = []
-            //CHECK THE BASE CURRENCY
-            let myRate = ''
-            let baseCurrency = await myCurrenciesModel.findOne({ BASE_CURRENCY: 'Y' });
-            if (baseCurrency) {
-                myRate = baseCurrency.RATE
-            }
-            for (let a = 0; a < cashFlows.length; a++) { //first loop for the purpose of PAYINs AND OUTs totals
-                //DURING THIS LOOP, ONE CAN TAKE ADVANTAGE AND CALCULATE THE OPENING BAL FOR BOTH THE PAYINs AND OUTs
-                const row = cashFlows[a];
+        // Always Sort the array by 'income date' in ascending order
+        cashFlows.sort((a, b) => {
+            const [dayA, monthA, yearA] = a.CashFlowDate.split('/');
+            const [dayB, monthB, yearB] = b.CashFlowDate.split('/');
+            return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
+        });
+
+        let totalExpensesPerRange = 0;
+        let totalIncomePerRange = 0;
+        let advSearchedInputTotal = 0;
+        let payInSearchedInputTotal = 0;
+        let payOutSearchedInputTotal = 0;
+        let totalExpensesPerRangeAdv = 0;
+        let totalIncomePerRangeAdv = 0;
+        let theBeforeIncome = 0;
+        let theBeforeExpenses = 0;
+        let cashFlowArray = [];
+        let payOutcashFlowArray = [];
+        let allCashFlows = [];
+        let payOutsearchedInputArray = [];
+        let payInsearchedInputArray = [];
+        let advSearchedInputArray = [];
+
+        // CHECK THE BASE CURRENCY
+        let myRate = '';
+        let baseCurrency = await myCurrenciesModel.findOne({ BASE_CURRENCY: 'Y' });
+        if (baseCurrency) {
+            myRate = baseCurrency.RATE;
+        }
+
+        // Check if the existing cashflows have storeNames; if not, process them as default
+        const documentsWithoutStoreName = await myCashflowModel.find({
+            $or: [
+                { StoreName: { $exists: false } }, // Documents where StoreName does not exist
+                { StoreName: { $in: [null, ""] } } // Documents where StoreName is null or an empty string
+            ]
+        });
+
+        // Check if the default store exists
+        const defaultStore = await myCashflowModel.find({ StoreName: 'DEFAULT' });
+        for (let a = 0; a < cashFlows.length; a++) {
+            const row = cashFlows[a];
+            let isProcessed = false; // Flag to track if the document has been processed
+
+            // Function to perform data computations
+            function dataComputations() {
                 const date = row.CashFlowDate;
-                //    console.log(row)
                 const parts = date.split("/");
                 const formattedDate = parts[1] + "/" + parts[0] + "/" + parts[2];
                 const formattedDates2 = new Date(formattedDate);
-                //RE CALCULATE THE CASH EQUIVE BASE ON THE CURRENCY SELECTED
 
+                // Recalculate the cash equivalent based on the currency selected
                 const relativeRate = row.CashFlowRate / baseCurrency.RATE;
                 row.CashFlowCashEquiv = Number(parseFloat(row.CashFlowAmount) / parseFloat(relativeRate)).toFixed(2);
-                //calculate the opening balance
-                //GET THE VALUE OF THE PREVIOUS MONTH BASED ON THE RANGE SELECTED
+
+                // Calculate the opening balance
                 const momntStartDate1 = moment.tz(startDate, "Africa/Harare").startOf('day'); // Midnight in Zimbabwe
-
-                // Subtract 1 day correctly
                 let theBeforeStartDate1 = momntStartDate1.clone().subtract(1, "days");
-
-                // Convert to JavaScript Date without shifting to UTC
                 theBeforeStartDate1 = moment.tz(theBeforeStartDate1.format("YYYY-MM-DD HH:mm:ss"), "Africa/Harare").toDate();
 
                 // Ensure formattedDates2 is also in Zimbabwe timezone
@@ -91,132 +107,106 @@ export async function getCashFlowArray(req, startDate, endDate, pageSize, page, 
                     }
                 }
 
-
-                // const momntStartDate = moment(startDate)
-
-                // let theBeforeStartDate = momntStartDate.subtract(1, "days")
-
-                // theBeforeStartDate = new Date(theBeforeStartDate)
-                // if (row.CashFlowType === "Payout") {
-                //     if (theBeforeStartDate.getTime() >= formattedDates2.getTime()) {
-                //         theBeforeExpenses += parseFloat(row.CashFlowCashEquiv);
-                //     }
-                // }
-                // else if (row.CashFlowType === "Pay in") {
-                //     if (theBeforeStartDate.getTime() >= formattedDates2.getTime()) {
-                //         theBeforeIncome += parseFloat(row.CashFlowCashEquiv);
-                //     }
-                // }
-                // const openingBalance = parseFloat(theBeforeIncome) - parseFloat(theBeforeExpenses)
-                // console.log("Iam The opening Bal local " + openingBalance)
-                // // console.log("Ihave started my computation from" + theBeforeStartDate.getTime())
-
                 if (startDate.getTime() <= formattedDates2.getTime() && formattedDates2.getTime() <= endDate.getTime()) {
                     if (row.CashFlowType === 'Payout') {
-
-                        //ALSO IF THE SARCH INPUT HAS SOMETHING BUT THE CATEGORY FILTE DOESNT
-                        const match = (row.CashFlowDescription).toLowerCase().includes(advancedSearchInput)
+                        const match = (row.CashFlowDescription).toLowerCase().includes(advancedSearchInput);
                         if (match) {
-                            //collect the totals of the filterd stuff
                             payOutSearchedInputTotal += parseFloat(row.CashFlowCashEquiv);
-                            //THEN CREATE THE ARRAY FOR all the searched stuff
-                            payOutsearchedInputArray.push(cashFlows[a])
+                            payOutsearchedInputArray.push(cashFlows[a]);
                         }
-
-                        //get totals for advanced sheet
-                        totalExpensesPerRangeAdv = parseFloat(totalExpensesPerRangeAdv) + parseFloat(row.CashFlowCashEquiv)
-
-
+                        totalExpensesPerRangeAdv = parseFloat(totalExpensesPerRangeAdv) + parseFloat(row.CashFlowCashEquiv);
                     }
                     if (row.CashFlowType === 'Pay in') {
-
-                        //ALSO IF THE SARCH INPUT HAS SOMETHING BUT THE CATEGORY FILTE DOESNT
-                        const match = (row.CashFlowDescription).toLowerCase().includes(advancedSearchInput)
+                        const match = (row.CashFlowDescription).toLowerCase().includes(advancedSearchInput);
                         if (match) {
-                            //collect the totals of the filterd stuff
                             payInSearchedInputTotal += parseFloat(row.CashFlowCashEquiv);
-                            //THEN CREATE THE ARRAY FOR all the searched stuff
-                            payInsearchedInputArray.push(cashFlows[a])
+                            payInsearchedInputArray.push(cashFlows[a]);
                         }
-
-                        //get totals for advanced sheet
-                        totalIncomePerRangeAdv = parseFloat(totalIncomePerRangeAdv) + (row.CashFlowCashEquiv)
-                        //get the payOuts
+                        totalIncomePerRangeAdv = parseFloat(totalIncomePerRangeAdv) + (row.CashFlowCashEquiv);
                     }
 
-                    //FOR ADVANCE
-                    const match = (row.CashFlowDescription).toLowerCase().includes(advancedSearchInput)
+                    const match = (row.CashFlowDescription).toLowerCase().includes(advancedSearchInput);
                     if (match) {
-                        //collect the totals of the filterd stuff
                         advSearchedInputTotal = parseFloat(advSearchedInputTotal) + (row.CashFlowCashEquiv);
-                        //get the array of both payins and payouts searched
-                        advSearchedInputArray.push(cashFlows[a])
+                        advSearchedInputArray.push(cashFlows[a]);
+                    } else {
+                        allCashFlows.push(cashFlows[a]);
                     }
-                    else {
-                        // advSearchedInputTotal = parseFloat(advSearchedInputTotal) + (row.CashFlowCashEquiv);
-                        //get the array of both payins and payouts
-                        allCashFlows.push(cashFlows[a])
-                    }
-
                 }
             }
 
-            // console.log(index2 +'index2')
-            //THE OPENING BALANCE FOR THE SELECTED RANGE
-            const openingBalance = parseFloat(theBeforeIncome) - parseFloat(theBeforeExpenses)
-            // console.log("Iam The opening Bal " + openingBalance)
-            //THEN CREATE THE ARRAY FOR PAYINS, FOR THE CURRENT RANGE 'this is the one to go to the client side js'
-            const startIndex = (parseInt(page) - 1) * parseInt(pageSize);
-            const endIndex = startIndex + parseInt(pageSize);
-            const itemsToProcess = cashFlowArray.slice(startIndex, endIndex);
-            const totalPages = Math.ceil(cashFlowArray.length / pageSize);
-            const itemsToProcess1 = payOutcashFlowArray.slice(startIndex, endIndex);
-            const totalPages1 = Math.ceil(payOutcashFlowArray.length / pageSize);
-            const itemsToProcess2 = allCashFlows.slice(startIndex, endIndex);
-            const totalPages2 = Math.ceil(allCashFlows.length / pageSize);
-            const payOutSearchedItemsToProcess = payOutsearchedInputArray.slice(startIndex, endIndex);
-            const payOutSearchedTotalPages = Math.ceil(payOutsearchedInputArray.length / pageSize);
-            const payInSearchedItemsToProcess = payInsearchedInputArray.slice(startIndex, endIndex);
-            const payInSearchedTotalPages = Math.ceil(payInsearchedInputArray.length / pageSize);
-            const advSearchedItemsToProcess = advSearchedInputArray.slice(startIndex, endIndex);
-            const advSearchedTotalPages = Math.ceil(advSearchedInputArray.length / pageSize);
+            // First, check if the selected store matches the row's store name
+            if (selectedStoreName && selectedStoreName !== "ALL STORES" && selectedStoreName !== "DEFAULT") {
+                // Case 1: Show only records that match the selected store
+                if (selectedStoreName === row.StoreName) {
+                    dataComputations();
+                }
+            }
 
+            // check for documents without StoreName
+            else if (selectedStoreName && selectedStoreName === "DEFAULT") {
+                if (documentsWithoutStoreName.some(doc => doc._id.toString() === row._id.toString())) {
+                    dataComputations();
+                }
 
-            const data = {
-                startDate: startDate,
-                endDate: endDate,
-                openingBalance: openingBalance,
-                payOutSearchedInputTotal: payOutSearchedInputTotal,
-                payInSearchedInputTotal: payInSearchedInputTotal,
-                totalIncomePerRange: totalIncomePerRange,
-                totalExpensesPerRange: totalExpensesPerRange,
-                totalPages: totalPages,
-                itemsToProcess: itemsToProcess, //THIS MUST ONLY CONTAINS THE INFORMATION OF WHATEVER THAT IS THE CURRENT PAGE BY THE USER
-                totalPages1: totalPages1,
-                itemsToProcess1: itemsToProcess1,
-                itemsToProcess2: itemsToProcess2,
-                allCashFlows: allCashFlows,
-                totalPages2: totalPages2,
-                payInSearchedItemsToProcess: payInSearchedItemsToProcess,
-                payInSearchedTotalPages: payInSearchedTotalPages,
-                payOutSearchedItemsToProcess: payOutSearchedItemsToProcess,
-                payOutSearchedTotalPages: payOutSearchedTotalPages,
-                totalExpensesPerRangeAdv: totalExpensesPerRangeAdv,
-                totalIncomePerRangeAdv: totalIncomePerRangeAdv,
-                advSearchedItemsToProcess: advSearchedItemsToProcess,
-                advSearchedTotalPages: advSearchedTotalPages,
-
-
-            };
-            return { data };
+                if (defaultStore.some(doc => doc._id.toString() === row._id.toString())) {
+                    dataComputations();
+                }
+            }
+            // check for "ALL STORES and include those with no store name field"
+            else if (selectedStoreName === 'ALL STORES') {
+                dataComputations();
+            }
         }
-    }
-    catch (err) {
+
+        // THE OPENING BALANCE FOR THE SELECTED RANGE
+        const openingBalance = parseFloat(theBeforeIncome) - parseFloat(theBeforeExpenses);
+
+        // Pagination logic
+        const startIndex = (parseInt(page) - 1) * parseInt(pageSize);
+        const endIndex = startIndex + parseInt(pageSize);
+        const itemsToProcess = cashFlowArray.slice(startIndex, endIndex);
+        const totalPages = Math.ceil(cashFlowArray.length / pageSize);
+        const itemsToProcess1 = payOutcashFlowArray.slice(startIndex, endIndex);
+        const totalPages1 = Math.ceil(payOutcashFlowArray.length / pageSize);
+        const itemsToProcess2 = allCashFlows.slice(startIndex, endIndex);
+        const totalPages2 = Math.ceil(allCashFlows.length / pageSize);
+        const payOutSearchedItemsToProcess = payOutsearchedInputArray.slice(startIndex, endIndex);
+        const payOutSearchedTotalPages = Math.ceil(payOutsearchedInputArray.length / pageSize);
+        const payInSearchedItemsToProcess = payInsearchedInputArray.slice(startIndex, endIndex);
+        const payInSearchedTotalPages = Math.ceil(payInsearchedInputArray.length / pageSize);
+        const advSearchedItemsToProcess = advSearchedInputArray.slice(startIndex, endIndex);
+        const advSearchedTotalPages = Math.ceil(advSearchedInputArray.length / pageSize);
+
+        const data = {
+            startDate: startDate,
+            endDate: endDate,
+            openingBalance: openingBalance,
+            payOutSearchedInputTotal: payOutSearchedInputTotal,
+            payInSearchedInputTotal: payInSearchedInputTotal,
+            totalIncomePerRange: totalIncomePerRange,
+            totalExpensesPerRange: totalExpensesPerRange,
+            totalPages: totalPages,
+            itemsToProcess: itemsToProcess,
+            totalPages1: totalPages1,
+            itemsToProcess1: itemsToProcess1,
+            itemsToProcess2: itemsToProcess2,
+            allCashFlows: allCashFlows,
+            totalPages2: totalPages2,
+            payInSearchedItemsToProcess: payInSearchedItemsToProcess,
+            payInSearchedTotalPages: payInSearchedTotalPages,
+            payOutSearchedItemsToProcess: payOutSearchedItemsToProcess,
+            payOutSearchedTotalPages: payOutSearchedTotalPages,
+            totalExpensesPerRangeAdv: totalExpensesPerRangeAdv,
+            totalIncomePerRangeAdv: totalIncomePerRangeAdv,
+            advSearchedItemsToProcess: advSearchedItemsToProcess,
+            advSearchedTotalPages: advSearchedTotalPages,
+        };
+        return { data };
+    } catch (err) {
         console.error('Error connecting to MongoDB:', err);
     }
-
 }
-
 
 export async function updateCashFlowDate(req, rowId, newDate, startDate, endDate, pageSize, page, advancedSearchInput, sessionId) {
     try {
@@ -367,10 +357,8 @@ export async function updateCashFlowType(req, rowId, typeSelected, sessionId) {
             );
 
             if (updatedDocument) {
-                console.log('Document updated successfully:', updatedDocument);
                 amUpdated = true;
             } else {
-                console.log('No document was updated.');
                 amUpdated = false;
             }
 
@@ -800,146 +788,7 @@ export async function updateCashFlowRate(req, rowId, newRate, newCashFlowCashEqu
     }
 }
 //====================================================================================================================
-// export async function deleteCashFLow(req, startDate, endDate, pageSize, page, advancedSearchInput, checkedRowsId, sessionId) {
-//     try {
-//         const db = await connectDB(req, databaseName, signingCriteria, sessionId);
-//         if (db) {
-//             startDate = new Date(startDate)
-//             endDate = new Date(endDate)
-//             // Create the model with the specific connection
-//             const myCashflowModel = CashflowModel(db);
-//             const myCurrenciesModel = CurrenciesModel(db);
-//             // Always Sort the array by 'income date' in ascending order, when the user want to change this it is up to her
-//             //and the settings are to be kept under local storage
-//             cashFlows = await myCashflowModel.find({})
-//             cashFlows.sort((a, b) => {
-//                 const [dayA, monthA, yearA] = a.CashFlowDate.split('/');
-//                 const [dayB, monthB, yearB] = b.CashFlowDate.split('/');
-//                 return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
-//             });
-//             console.log('i am the  delete cashflow row  procedure  ');
-//             let deleteIds = [];
-//             for (let i = 0; i < checkedRowsId.length; i++) {
-//                 const cashFlowId = checkedRowsId[i];//get the array of ids to delete
-//                 deleteIds.push(ObjectId(cashFlowId));//make each id an object of mongo db id
-//             }
-//             // Find and store deleted documents BEFORE deleting them
-//             await myCashflowModel.deleteMany({ _id: { $in: deleteIds } })
-//                 .then(result => {
-//                     console.log(`${result.deletedCount} document(s) were deleted`);
-//                     if (result.deletedCount > 0) {
-//                         amDeleted = true;
-//                         console.log(`${result.deletedCount} document(s) were deleted successfully.`);
-//                         updatedData()
-//                     }
-//                     else if (result.deletedCount === 0) {
-//                         amDeleted = false;
-//                         const data = {}
-//                         return { data }
-//                     }
 
-//                 })
-
-//             async function updatedData() {
-//                 const allDocuments = await myCashflowModel.find({});
-//                 let allCashFlows = []
-//                 let advsearchedInputArray = []
-//                 let payOutSearchedInputTotal = 0
-//                 let payInSearchedInputTotal = 0
-//                 let totalExpensesPerRangeAdv = 0
-//                 let totalIncomePerRangeAdv = 0
-//                 let baseCurrency = await myCurrenciesModel.findOne({ BASE_CURRENCY: 'Y' });
-//                 if (!baseCurrency) {
-//                     return
-//                 }
-//                 for (let a = 0; a < allDocuments.length; a++) { //first loop for the purpose of PAYINs AND OUTs totals
-//                     //DURING THIS LOOP, ONE CAN TAKE ADVANTAGE AND CALCULATE THE OPENING BAL FOR BOTH THE PAYINs AND OUTs
-//                     const row = allDocuments[a];
-//                     const date = row.CashFlowDate;
-//                     //    console.log(row)
-//                     const parts = date.split("/");
-//                     const formattedDate = parts[1] + "/" + parts[0] + "/" + parts[2];
-//                     const formattedDates2 = new Date(formattedDate);
-//                     //RE CALCULATE THE CASH EQUIVE BASE ON THE CURRENCY SELECTED
-//                     const relativeRate = row.CashFlowRate / baseCurrency.RATE;
-//                     row.CashFlowCashEquiv = Number(parseFloat(row.CashFlowAmount) / parseFloat(relativeRate)).toFixed(2);
-//                     startDate = moment.tz(startDate, "Africa/Harare").startOf('day'); // Midnight in Zimbabwe
-//                     endDate = moment.tz(endDate, "Africa/Harare").startOf('day'); // Midnight in Zimbabwe
-//                     // Convert to JavaScript Date objects (without shifting to UTC)
-//                     startDate = startDate.toDate();
-//                     endDate = endDate.toDate();
-//                     // Ensure formattedDates2 is also in Zimbabwe timezone
-//                     const formattedDates2Zim = moment.tz(formattedDates2, "Africa/Harare").startOf('day').toDate();
-//                     if (startDate.getTime() <= formattedDates2Zim.getTime() && formattedDates2Zim.getTime() <= endDate.getTime()) {
-//                         //FOR ADVANCE
-//                         if (row.CashFlowType === 'Payout') {
-//                             //ALSO IF THE SARCH INPUT HAS SOMETHING BUT THE CATEGORY FILTE DOESNT
-//                             const match = (row.CashFlowDescription).toLowerCase().includes(advancedSearchInput)
-//                             if (match) {
-//                                 //collect the totals of the filterd stuff
-//                                 payOutSearchedInputTotal += parseFloat(row.CashFlowCashEquiv);
-//                                 //THEN CREATE THE ARRAY FOR all the searched stuff
-//                                 advsearchedInputArray.push(cashFlows[a])
-//                             }
-//                             allCashFlows.push(cashFlows[a])
-
-//                             //get totals for advanced sheet
-//                             totalExpensesPerRangeAdv = parseFloat(totalExpensesPerRangeAdv) + parseFloat(row.CashFlowCashEquiv)
-//                         }
-//                         if (row.CashFlowType === 'Pay in') {
-//                             //ALSO IF THE SARCH INPUT HAS SOMETHING BUT THE CATEGORY FILTE DOESNT
-//                             const match = (row.CashFlowDescription).toLowerCase().includes(advancedSearchInput)
-//                             if (match) {
-//                                 //collect the totals of the filterd stuff
-//                                 payInSearchedInputTotal += parseFloat(row.CashFlowCashEquiv);
-//                                 //THEN CREATE THE ARRAY FOR all the searched stuff
-//                                 advsearchedInputArray.push(cashFlows[a])
-//                             }
-//                             allCashFlows.push(cashFlows[a])
-
-//                             //get totals for advanced sheet
-//                             totalIncomePerRangeAdv = parseFloat(totalIncomePerRangeAdv) + (row.CashFlowCashEquiv)
-//                             //get the payOuts
-//                         }
-
-//                     }
-//                 }
-//                 const startIndex = (parseInt(page) - 1) * parseInt(pageSize);
-//                 const endIndex = startIndex + parseInt(pageSize);
-//                 const itemsToProcess = allCashFlows.slice(startIndex, endIndex);
-//                 const totalPages = Math.ceil(allCashFlows.length / pageSize);
-//                 const searchedItemsToProcess = advsearchedInputArray.slice(startIndex, endIndex);
-//                 const searchedTotalPages = Math.ceil(advsearchedInputArray.length / pageSize);
-//                 const advIncomeTotal = totalIncomePerRangeAdv;
-//                 const advExpenseTotal = totalExpensesPerRangeAdv;
-//                 const advSearchedpayoutTotal = payOutSearchedInputTotal;
-//                 const advSearchedpayinTotal = payInSearchedInputTotal;
-
-//                 const data = {
-//                     amDeleted: true,
-//                     totalPages: totalPages,
-//                     itemsToProcess: itemsToProcess, //THIS MUST ONLY CONTAINS THE INFORMATION OF WHATEVER THAT IS THE CURRENT PAGE BY THE USER
-//                     totalPages: totalPages,
-//                     searchedTotalPages: searchedTotalPages,
-//                     searchedItemsToProcess: searchedItemsToProcess,
-//                     allCashFlows: allCashFlows,
-//                     advIncomeTotal: advIncomeTotal,
-//                     advExpenseTotal: advExpenseTotal,
-//                     advSearchedpayinTotal: advSearchedpayinTotal,
-//                     advSearchedpayoutTotal: advSearchedpayoutTotal,
-
-//                 };
-//                 console.log('data')
-//                 console.log(data + 'data')
-//                 return { data };
-//             }
-
-//         }
-//     } catch (error) {
-//         console.error(error);
-//         return { status: 401, amDeleted: false, deletedDocuments: [] };
-//     }
-// }
 export async function deleteCashFLow(req, startDate, endDate, pageSize, page, advancedSearchInput, checkedRowsId, sessionId) {
     try {
         const db = await connectDB(req, databaseName, signingCriteria, sessionId);
@@ -1132,12 +981,12 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
         let theRate = 0
         let correctFormattedDate = ''
         //declare variables that will store the variables
-        let date = '', shift = '', type = '', invoiceNo = '', description = '', currency = '', category = '', amount = 0, rate = 0, id = ''
+        let date = '', shift = '', type = '', invoiceNo = '', description = '', currency = '', category = '', amount = 0, rate = 0, id = '', loyverseId = '', store = ''
 
         const findMatchingDocument = async (rowData) => {
             try {
                 // Check if a document with the same CashFlowType and other fields exists
-                const exists = await myCashflowModel.exists({
+                const exists = await myCashflowModel.findOne({
                     CashFlowType: rowData.CashFlowType,
                     CashFlowInvoiceRef: rowData.CashFlowInvoiceRef,
                     CashFlowDescription: rowData.CashFlowDescription,
@@ -1147,7 +996,9 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
                     CashFlowRate: rowData.CashFlowRate,
                     CashFlowCashEquiv: rowData.CashFlowCashEquiv,
                     CashFlowDate: rowData.CashFlowDate,
-                });
+                    StoreName: rowData.StoreName,
+                    LoyverseId: rowData.LoyverseId,
+                }).select('_id').lean(); // Only fetch the _id field and return a plain JavaScript object
 
                 if (exists) {
                     console.log("Data already exists in the database.");
@@ -1161,9 +1012,8 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
                 return false;
             }
         };
-
         //cretae a function that will populate the arrays to send to db
-        async function populateArrays(date, shift, invoiceNo, description, currency, category, amount, rate, type) {
+        async function populateArrays(date, shift, invoiceNo, description, currency, category, amount, rate, type, store, loyverseId) {
             // const shiftNumber = "Shift" + data.Shiftnumber + " " + data.POS;
             //calculate the relative rate to be used using the rate of the base currency and the selected currency
             if (rate !== 0) {
@@ -1191,65 +1041,68 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
                 CashFlowAmount: amount,
                 CashFlowRate: theRate,
                 CashFlowCashEquiv: cashEquivValue,
+                StoreName: store,
+                LoyverseId: loyverseId,
             }
 
             // Conditionally add the Tax field if checkTemplateStatus is 'loyverseHeaders'
-            if (checkTemplateStatus === 'loyverseHeaders' || (checkTemplateStatus === 'slyRetailHeaders' && id === '')) {
+            // if (checkTemplateStatus === 'loyverseHeaders' || (checkTemplateStatus === 'slyRetailHeaders' && id === '')) {
+            if ((checkTemplateStatus === 'slyRetailHeaders' && id === '')) {
                 rowData.Tax = {
                     vat: { QRCode: "", DeviceId: 0, ZimraFsNo: '', VatNumber: 0, TinNumber: 0, VatAmount: 0, VatStatus: "N" }, ztf: { First: '', Second: '', LevyAmount: 0, ZtfStatus: "N" }
                 }
             }
 
             // Check if the shift exists
-            if (checkTemplateStatus === 'loyverseHeaders') {
-                //check if the data already exist
-                const matchingDoc = await findMatchingDocument(rowData);
-                if (!matchingDoc) {
-                    // Group items by shift and type
-                    const groupedByShift = {};
-                    // Initialize the group if it doesn't exist
-                    if (!groupedByShift[shift]) {
-                        groupedByShift[shift] = {
-                            payIn: [],
-                            payOut: []
-                        };
-                    }
-                    const existingShift = await myCashflowModel.findOne({ CashFlowShift: shift, CashFlowType: type });
-                    if (!existingShift) {
+            // if (checkTemplateStatus === 'loyverseHeaders') {
+            //     //check if the data already exist
+            //     const matchingDoc = await findMatchingDocument(rowData);
+            //     if (!matchingDoc) {
+            //         // Group items by shift and type
+            //         const groupedByShift = {};
+            //         // Initialize the group if it doesn't exist
+            //         if (!groupedByShift[shift]) {
+            //             groupedByShift[shift] = {
+            //                 payIn: [],
+            //                 payOut: []
+            //             };
+            //         }
+            //         const existingShift = await myCashflowModel.findOne({ CashFlowShift: shift, CashFlowType: type });
+            //         if (!existingShift) {
 
-                        // Add the rowData to the appropriate group based on type
-                        if (type === 'Pay in') {
-                            groupedByShift[shift].payIn.push(rowData);
-                        } else if (type === 'Payout') {
-                            groupedByShift[shift].payOut.push(rowData);
-                        }
+            //             // Add the rowData to the appropriate group based on type
+            //             if (type === 'Pay in') {
+            //                 groupedByShift[shift].payIn.push(rowData);
+            //             } else if (type === 'Payout') {
+            //                 groupedByShift[shift].payOut.push(rowData);
+            //             }
 
-                    }
+            //         }
 
-                    // Flatten the grouped data into payInRowDataArray and payOutRowDataArray
-                    for (const shift in groupedByShift) {
-                        payInRowDataArray.push(...groupedByShift[shift].payIn);
-                        payOutRowDataArray.push(...groupedByShift[shift].payOut);
-                    }
+            //         // Flatten the grouped data into payInRowDataArray and payOutRowDataArray
+            //         for (const shift in groupedByShift) {
+            //             payInRowDataArray.push(...groupedByShift[shift].payIn);
+            //             payOutRowDataArray.push(...groupedByShift[shift].payOut);
+            //         }
+            //     }
+
+            // }
+            // else {
+            //TO STOP DUPLICATION OF DOCUMENTS IF THE SHIFT IS MISING,CHECK IF THE DOCUMENTS EXIST ALREADY BY CHECKING THE WHOLE DATE IF THERE IS ANY MATCH\
+            //IF SO,DO NOTHING ELSE ADD THE DOCUMENT TO THE ARRAY
+            const matchingDoc = await findMatchingDocument(rowData);
+            if (matchingDoc) {
+
+            } else {
+
+                if (type === 'Pay in') {
+                    payInRowDataArray.push(rowData);
                 }
-
-            }
-            else {
-                //TO STOP DUPLICATION OF DOCUMENTS IF THE SHIFT IS MISING,CHECK IF THE DOCUMENTS EXIST ALREADY BY CHECKING THE WHOLE DATE IF THERE IS ANY MATCH\
-                //IF SO,DO NOTHING ELSE ADD THE DOCUMENT TO THE ARRAY
-                const matchingDoc = await findMatchingDocument(rowData);
-                if (matchingDoc) {
-
-                } else {
-
-                    if (type === 'Pay in') {
-                        payInRowDataArray.push(rowData);
-                    }
-                    else if (type === 'Payout') {
-                        payOutRowDataArray.push(rowData);
-                    }
+                else if (type === 'Payout') {
+                    payOutRowDataArray.push(rowData);
                 }
             }
+            // }
             // Check if the shift exists
             let myType = ''
             if (type === 'Pay in') {
@@ -1278,20 +1131,20 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
 
         for (let i = 0; i < itemsToProcess.length; i++) {
             const data = itemsToProcess[i];
-            if (checkTemplateStatus === 'loyverseHeaders') {
-                if (data.Comment === '') {
-                    data.Comment = `Unknown ${data.Type}`
-                }
-                else {
-                    data.Comment = data.Comment
-                }
-                date = data.Date; shift = "Shift" + data.Shiftnumber + " " + data.POS;
-                type = data.Type; invoiceNo = ''; currency = ''; category = 'suspense';
-                description = data.Comment;
-                amount = data.Amount; rate = 0
-                //call the function that populates the arrays
-                await populateArrays(date, shift, invoiceNo, description, currency, category, amount, rate, type)
-            }
+            // if (checkTemplateStatus === 'loyverseHeaders') {
+            //     if (data.Comment === '') {
+            //         data.Comment = `Unknown ${data.Type}`
+            //     }
+            //     else {
+            //         data.Comment = data.Comment
+            //     }
+            //     date = data.Date; shift = "Shift" + data.Shiftnumber + " " + data.POS;
+            //     type = data.Type; invoiceNo = ''; currency = ''; category = 'suspense';
+            //     description = data.Comment; store = data.Store
+            //     amount = data.Amount; rate = 0
+            //     //call the function that populates the arrays
+            //     await populateArrays(date, shift, invoiceNo, description, currency, category, amount, rate, type, store)
+            // }
 
             if (checkTemplateStatus === 'slyRetailHeaders') {
                 if (data.Id === '') {
@@ -1308,14 +1161,14 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
                     else {
                         data.Description = data.Description
                     }
+
                     date = data.Date; shift = data.ShiftNo; type = data.Type; invoiceNo = data.InvoiceRef;
                     description = data.Description; currency = data.Currency; category = data.Category;
-                    amount = data.Amount; rate = data.Rate
-                    await populateArrays(date, shift, invoiceNo, description, currency, category, amount, rate, type)
+                    amount = data.Amount; rate = data.Rate; store = 'DEFAULT'; loyverseId = ''
+                    await populateArrays(date, shift, invoiceNo, description, currency, category, amount, rate, type, store, loyverseId)
 
                 }
                 else if (data.Id !== '') {
-                    console.log('ndamu id')
                     try {
                         let myType = ''
                         if (data.Type === 'Pay in') {
@@ -1370,12 +1223,13 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
                             const updatedDocument = await myCashflowModel.findOne({ _id: ObjectId(data.Id) });
                             insertedDocuments.push(updatedDocument);
                         } else {
-                           console.log(`No changes made to document with _id: ${data.Id}`);
+                            console.log(`No changes made to document with _id: ${data.Id}`);
                         }
                     } catch (error) {
                         console.error(`Error updating document with _id: ${data.Id}:`, error);
+
                     }
-                      // Set isSaving based on whether any update succeeded
+                    // Set isSaving based on whether any update succeeded
                     isSaving = anyUpdateSuccessful;
                 }
             }
@@ -1412,11 +1266,14 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
             // Retrieve the inserted documents using their IDs
             insertedDocuments = await myCashflowModel.find({ _id: { $in: insertedIds } });
 
-        } else {
-           if (insertedDocuments.length === 0) {
+        }
+        else {
+            if (insertedDocuments.length === 0) {
+                console.log('its empty array of docs')
                 isSaving = false,
-                insertedDocuments = [];
+                    insertedDocuments = [];
             }
+
         }
         //then save any new categories
 
@@ -1438,6 +1295,7 @@ export async function insertCashFlowData(req, itemsToProcess, checkTemplateStatu
                 return { isSaved: false };
             }
         }
+        console.log(insertedDocuments)
         return { isSaving, insertedDocuments, insertedCategories }
     } catch (error) {
         console.error('Error inserting documents:', error);
