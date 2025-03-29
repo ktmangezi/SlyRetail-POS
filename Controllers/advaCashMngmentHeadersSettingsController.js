@@ -10,9 +10,9 @@ export async function getadvancedHeaderStatusArray(req, sessionId) {
     const db = await connectDB(req, databaseName, signingCriteria, sessionId);
     if (db) {
         // Create the model with the specific connection
-        const myaccountingPeriodModelModel = advaHeadersModel(db);
+        const myadvHeadersModel = advaHeadersModel(db);
         try {
-            advancedHeaderStatus = await myaccountingPeriodModelModel.find()
+            advancedHeaderStatus = await myadvHeadersModel.find()
             return { advancedHeaderStatus };
         } catch (err) {
             console.error('Error fetching status:', err);
@@ -21,14 +21,16 @@ export async function getadvancedHeaderStatusArray(req, sessionId) {
 
 }
 export async function saveHeaderStatusAdv(req, headerNamefcb, headerisDisplayed, sessionId) {
-    // process the database connection request
-    const db = await connectDB(req, databaseName, signingCriteria, sessionId);
-    if (db) {
-        // Create the model with the specific connection
-        const myaccountingPeriodModelModel = advaHeadersModel(db);
-        try {
+
+
+    try {
+        // process the database connection request
+        const db = await connectDB(req, databaseName, signingCriteria, sessionId);
+        if (db) {
+            // Create the model with the specific connection
+            const myadvHeadersModel = advaHeadersModel(db);
             //THERE ARE OTHER HEADERS LIKE VAT THAT SHOULD BE OPENED AFTER SUBSCRIPTIONS, ALL THOSE LOGIC WILL BE MANAGED HERE
-            await myaccountingPeriodModelModel.updateOne({ HeaderName: headerNamefcb }, {
+            await myadvHeadersModel.updateOne({ HeaderName: headerNamefcb }, {
                 $set: {
                     isDisplayed: headerisDisplayed
                 }
@@ -40,12 +42,13 @@ export async function saveHeaderStatusAdv(req, headerNamefcb, headerisDisplayed,
                 }
                 else if (modifiedCount === 0) {
                     isSaving = false;
+
                 }
             })
             return { isSaving };
         }
-        catch (error) {
-            console.error(error)
-        }
+    }
+    catch (error) {
+        console.error(error)
     }
 }
