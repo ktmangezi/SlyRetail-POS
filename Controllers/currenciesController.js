@@ -141,11 +141,12 @@ export async function updateBaseCurrency(req, paymentId, sessionId) {
                 }
             }
         }
+        return { isUpdated };
+
     }
     catch (err) {
         console.error('Error UPDATING CURRENCIES:', err);
     }
-    return { isUpdated };
 }
 //==========================================================================================================
 export async function updateCurrencyRate(req, currencyId, CurrencyRate, sessionId) {
