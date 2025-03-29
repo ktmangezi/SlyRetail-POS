@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Page</title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="icon" type="image/x-icon" href="/images/newslylogo.jpg">
+    <link rel="stylesheet" href="css/notification.css" />
+    <link rel="stylesheet" href="css/all.min.css">
+
+</head>
+
+<body style="margin: 0;">
+    <style>
+        * {
+            padding: 0;
+        }
+
+        .form-group {
+            width: 100%;
+        }
+
+        #token {
+            width: 100%;
+        }
+
+        .btn-primary {
+            margin-top: 23px;
+            background-color: #c8cbcf;
+            border-color: #c8cbcf;
+        }
+
+        .btn-primary:hover {
+            background-color: rgb(1, 6, 105);
+            border-color: rgb(1, 6, 105);
+        }
+
+        #tokendropdown {
+            margin-top: 250px;
+        }
+
+        .dropdownContainer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Blur background */
+        .tokenContainer {
+            position: fixed;
+            top: 47px;
+            left: 54px;
+            width: 93%;
+            height: 93%;
+            background: rgba(0, 0, 0, 0);
+            backdrop-filter: blur(2px);
+            z-index: 1000;
+        }
+
+        /* Center the form */
+        .center-form {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1001;
+            /* Hidden by default */
+        }
+
+        /* Inline icons with input */
+        .token-input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            /* Space between input and icons */
+        }
+
+        .tokenbtns {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            /* Space between icons */
+        }
+
+        .tick,
+        .x {
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        .tick {
+            color: green;
+            /* Change color on hover */
+        }
+
+        .x {
+            color: red;
+            /* Change color on hover */
+        }
+    </style>
+    <!-- PAGE LOADER -->
+    <div class="loader-container">
+        <div class="loader"></div>
+        <p class="loader-text">Loading...</p>
+    </div>
+    <div class="myloader" style="display: none;"></div>
+    <div class="theLoader">
+        <div id="spinner"></div>
+    </div>
+    <div id="tool-bar" class="toolbar" style="display: none;">
+        <div class="menu-icon iconbtn">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+        </div>
+        <span id="toolbar-text">Advanced Cash Management </span>
+    </div>
+    <!--The MENU ITEMS-->
+    <div class="icon-nav close" style="display: none;">
+        <script src="js/common-iconsFE.js"></script>
+    </div>
+    <div class="bigContainer">
+        <div class="dropdownContainer" style="gap: 20px;">
+            <div class="dropdown" id="tokendropdown">
+                <button class="btn tokenBtn dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                    aria-expanded="false" style="color:white;font-size:15px;background-color: rgb(1, 6, 105);">
+                    Signin with...
+                </button>
+                <ul class="dropdown-menu">
+                    <li class="thirdPartytokenOptions"> <a class="dropdown-item" id="option0" href="#">Loyverse</a></li>
+                    <li class="thirdPartytokenOptions"> <a class="dropdown-item" id="option1" href="#">Sales Play</a>
+                    </li>
+                    <li class="thirdPartytokenOptions"> <a class="dropdown-item" id="option2" href="#">Erp Next</a></li>
+                    <li class="thirdPartytokenOptions"> <a class="dropdown-item" id="option3" href="#">Ultimate
+                            P.O.S</a>
+                    </li>
+                    <li class="thirdPartytokenOptions"> <a class="dropdown-item" id="option4" href="#">Ewity</a></li>
+                </ul>
+            </div>
+            <button class="btn skipProcessBtn" type="button" aria-expanded="false"
+                style="color:white;font-size:15px;background-color: rgb(1, 6, 105);margin-top: 250px;width: 10%;">
+                Skip
+            </button>
+        </div>
+
+        <!-- code for a toekn input with  -->
+        <!-- //modify the code below remove submit button on the code below and make use of the tick and close icons the icons should be inline with the token input field and the form to display at the center with a blur background -->
+        <!-- Blur Background -->
+        <div class="tokenContainer" style="display: none;">
+            <!-- Centered Form -->
+            <div class="center-form">
+                <div class="card">
+                    <div class="card-header" style="background-color: rgb(1, 6, 106);color: white;">
+                        <h4>Set <span class="tokenSpan"></span>Token</h4>
+                    </div>
+                    <div class="card-body">
+                        <form id="tokenForm">
+                            <div class="form-group token-input-group">
+                                <input type="text" name="token" id="token" class="form-control"
+                                    placeholder="Enter Token">
+                                <span class="tokenbtns">
+                                    <div class="tick">
+                                        <i class="fas fa-check" id="submittoken"></i>
+                                    </div>
+                                    <div class="x">
+                                        <i class="fas fa-times" id="canceltoken"></i>
+                                    </div>
+                                </span>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="notificationBlock"></div>
+    </div>
+</body>
+
+</html>
+<script type="module" src="js/thirdPartyTokenFE.js"></script>
+<script type="text/javascript" src="js/jquery.min.js"></script>
+<script src="js/popper.min.js"></script>
+<script src="js/bootstrap.bundle.min.js"></script>
