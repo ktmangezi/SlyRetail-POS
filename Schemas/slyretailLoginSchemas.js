@@ -1,7 +1,12 @@
+
 import mongoose from 'mongoose';
 
 // Define a function that returns the CredentialsSchema with specific values
 const CredentialsSchema = new mongoose.Schema({
+    userId: {
+        type: String,
+        required: true
+    },
     User_Account: {
         type: String,
         required: true
@@ -12,20 +17,21 @@ const CredentialsSchema = new mongoose.Schema({
     },
     Email: {
         type: String,
+    },
+    thirdPartyToken: {
+        type: String,
+    },
+    merchantId: {
+        type: String,
     }
     // Add more fields as needed
 });
 
-// // Create a model based on the schema
-// const CredentialsModel = mongoose.model('User', CredentialsSchema);
-
-// export { CredentialsModel };
 // Create a model based on the schema
-// const CredentialsModel = mongoose.model('User', CredentialsSchema);
-
-// export { CredentialsSchema };
 const CredentialsModel = (db) => {
     // Create the model with the specific connection
     return db.model('User', CredentialsSchema);
 };
 export { CredentialsModel };
+
+
