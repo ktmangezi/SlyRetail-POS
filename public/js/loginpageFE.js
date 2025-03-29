@@ -12,6 +12,8 @@ const emailPattern = /^[^ ]+@[gmail.com]+\.[a-z]{2,3}$/;
 const header = document.getElementById('heading')
 let buttonContent = submitButton.textContent;
 localStorage.setItem('buttonContent', buttonContent)
+const tokenInput = document.getElementById("token");
+const tokenLabel = document.getElementById("labelToken");
 //==================================================================================================================================
 //SHOW AND HIDE PASSWORD we will need to under stand this
 const showPassword = document.getElementById('eyeSlash');
@@ -104,6 +106,8 @@ newClient.addEventListener('click', (e) => {
     document.getElementById('confirm').classList.remove('hidden');
     document.getElementById('user').classList.remove('hidden');
     document.getElementById('newuser').classList.add('hidden');
+    document.getElementById('emailLabel').classList.remove('float');
+    document.querySelector('.connectThirdParty').classList.add("hidden");
     header.textContent = 'Create Your Slyretail Account'
     buttonContent = 'Sign Up';
     loginForm.reset();
@@ -126,13 +130,112 @@ existingClient.addEventListener('click', (e) => {
     e.preventDefault();
     console.log("old user");
     submitButton.textContent = 'Sign In';
+    document.getElementById('emailLabel').classList.remove('float');
     document.getElementById('user').classList.add('hidden');
     document.getElementById('newuser').classList.remove('hidden');
     document.getElementById('confirm').classList.add('hidden');
+    document.querySelector('.connectThirdParty').classList.remove("hidden");
     header.textContent = 'Sign In To Your SlyRetail Account'
     buttonContent = 'Sign In';
     loginForm.reset();
 });
+
+//WHEN THE USER CLICKS ON THE THIRD PARTY TOKEN IN LOGIN PAGE
+const modal = document.querySelector(".loyversemodal");
+
+let allThirdPartyTokenOptions = document.querySelectorAll(".tokenOptions")
+allThirdPartyTokenOptions.forEach(option => {
+    option.addEventListener("click", function (event) {
+        event.preventDefault();
+        const selectedOption = option.innerText;
+        localStorage.setItem('thirdPartToken', selectedOption)
+        if (selectedOption === "Loyverse") {
+            modal.classList.remove("hidden")     //display the modal to enter the token upon selecting loyverse 
+            loginForm.classList.add("blur", "no-click");
+        }
+        else {
+            notification('Intergration Pending...')
+        }
+    });
+});
+
+// Close the modal when the user clicks on the cancel button
+modal.querySelector("#canceltoken").addEventListener("click", function () {
+    document.querySelector(".loyversemodal").classList.add("hidden");
+    loginForm.classList.remove("blur", "no-click");
+});
+tokenInput.addEventListener("focus", () => {
+    // Get the token from local storage
+    const thirdPartToken = localStorage.getItem('thirdPartToken')
+    tokenLabel.textContent = thirdPartToken + " token";
+});
+tokenInput.addEventListener("mouseenter", () => {
+    // Get the token from local storage
+    const thirdPartToken = localStorage.getItem('thirdPartToken')
+    tokenLabel.textContent = thirdPartToken + " token";
+});
+tokenInput.addEventListener("mouseleave", () => {
+    // Get the token from local storage
+    const thirdPartToken = localStorage.getItem('thirdPartToken')
+    tokenLabel.textContent = `Enter ${thirdPartToken} Token`;
+});
+
+// ================================================================================================================================
+// Loyverse modal to close on clicking outside the modal
+document.addEventListener("mousedown", function (event) {
+    const loyverseModal = document.querySelector(".loyversemodal");
+    const isClickInside = loyverseModal.contains(event.target);
+    // If the click was outside the modal, hide it
+    if (!isClickInside && !loyverseModal.classList.contains("hidden")) {
+        loyverseModal.classList.add("hidden");
+        loginForm.classList.remove("blur", "no-click");
+    }
+});
+
+//add an event listener on the submit button to call the savetokentodb functin
+document.querySelector('#submittoken').addEventListener('click', function (event) {
+    event.preventDefault()
+    const token = tokenInput.value
+    if (!token) {
+        notification('Please enter a token')
+        return
+    }
+    // close the modal after clickin tick
+    document.querySelector(".loyversemodal").classList.add("hidden");
+    checkIfTokenExists(token)
+
+
+})
+function checkIfTokenExists(token) {
+    notification('Processing.....')
+    //fetch the token to the server
+    fetch('/checkIfTokenExists', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            token,
+        })
+    }).then(response => response.json())
+        .then(data => {
+            if (data.doExist === true) {
+                notification('Token Found..Directing to page');
+                // Add a delay before redirecting
+                setTimeout(() => {
+                    window.location.href = '/advanceCashMngmnt';  // This runs in the browser
+                }, 2000); // 2-second delay
+            }
+            else {
+                notification('Token Not Found');
+                // Add a delay before redirecting
+                setTimeout(() => {
+                    window.location.href = '/';  // This runs in the browser
+                }, 5000); // 5-second delay
+            }
+        })
+
+}
 //WHEN THE USER EITHER CLICKS ON SIGN UP OR SIGN IN
 submitButton.addEventListener('click', (e) => {
     //    alert(buttonContent)
@@ -193,8 +296,6 @@ submitButton.addEventListener('click', (e) => {
                     }
                     return null; // If the session cookie is not found
                 };
-
-                console.log(getSessionId());
                 localStorage.setItem('sessionId', getSessionId())
 
 
@@ -202,7 +303,20 @@ submitButton.addEventListener('click', (e) => {
                 if (mySessionId !== null) {
                     notification('Login Successful... Directing to page.');
                     document.querySelector('.myloader').style.display = 'none'
-                    window.location.href = '/advanceCashMngmnt';  // This runs in the browser
+
+                    //check if the token exist or not
+                    if (data.existingthirdPartyToken !== 'no token') {
+                        window.location.href = '/advanceCashMngmnt';  // This runs in the browser
+                    }
+                    else {
+                        window.location.href = '/thirdPartyToken';  // This runs in the browser
+                        const sessionId = localStorage.getItem('sessionId');
+                        localStorage.clear();
+                        if (sessionId) {
+                            localStorage.setItem('sessionId', sessionId);
+                        }
+                    }
+
                 }
                 else {
                     // notification('Login failed. Please try again.');
