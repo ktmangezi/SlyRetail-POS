@@ -326,7 +326,7 @@ async function signUpSignIn(req, databaseName, email, databasePassword, signingC
                     try {
                         if (mytoken) {
                             if (mytoken.thirdPartyToken !== '') {
-                                req.session.thirdPartyToken = credentials.thirdPartyToken
+                                req.session.thirdPartyToken = mytoken.thirdPartyToken
                                 existingthirdPartyToken = mytoken.thirdPartyToken
                             }
                             else {
