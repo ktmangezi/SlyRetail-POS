@@ -203,6 +203,10 @@ fetch('/currencies')
                                                 const myEndDate = localStorage.getItem('lastDate');
                                                 startDate = new Date(myStartDate)
                                                 endDate = new Date(myEndDate)
+                                                startDate = moment.tz(startDate, "Africa/Harare").startOf('day'); // Midnight in Zimbabwe
+                                                endDate = moment.tz(endDate, "Africa/Harare").endOf('day'); // end of day  in Zimbabwe
+
+
                                                 trialBalance(startDate, endDate)
 
                                                 //remove focus on the text
@@ -285,8 +289,9 @@ fetch('/currencies')
                                                     const parts = date.split("/");
                                                     const formattedDate = parts[1] + "/" + parts[0] + "/" + parts[2];
                                                     const formattedDates2 = new Date(formattedDate);
+                                                    const formattedDates2Zim = moment.tz(formattedDates2, "Africa/Harare").startOf('day').toDate();
                                                     if (each.category === row.CashFlowCategory) {
-                                                        if (startDate.getTime() <= formattedDates2.getTime() && formattedDates2.getTime() <= endDate.getTime()) {//CODE FOR 
+                                                        if (startDate.getTime() <= formattedDates2Zim.getTime() && formattedDates2Zim.getTime() <= endDate.getTime()) {//CODE FOR 
                                                             //TIRIMO CHECK THE TOTALS OF THE AVAILABLE CATEGORIES
                                                             totalPayInCatAmnt1 = parseFloat(totalPayInCatAmnt1) + parseFloat(row.CashFlowCashEquiv);
                                                             totalPayInCatAmnt = parseFloat(totalPayInCatAmnt) + parseFloat(row.CashFlowCashEquiv);
@@ -309,8 +314,9 @@ fetch('/currencies')
                                                     const parts = date.split("/");
                                                     const formattedDate = parts[1] + "/" + parts[0] + "/" + parts[2];
                                                     const formattedDates2 = new Date(formattedDate);
+                                                    const formattedDates2Zim = moment.tz(formattedDates2, "Africa/Harare").startOf('day').toDate();
                                                     if (each.category === row.CashFlowCategory) {
-                                                        if (startDate.getTime() <= formattedDates2.getTime() && formattedDates2.getTime() <= endDate.getTime()) {//CODE FOR 
+                                                        if (startDate.getTime() <= formattedDates2Zim.getTime() && formattedDates2Zim.getTime() <= endDate.getTime()) {//CODE FOR 
                                                             //TIRIMO CHECK THE TOTALS OF THE AVAILABLE CATEGORIES
                                                             totalPayOutCatAmnt = parseFloat(totalPayOutCatAmnt) + parseFloat(row.CashFlowCashEquiv);
                                                             totalPayOutCatAmnt1 = parseFloat(totalPayOutCatAmnt1) + parseFloat(row.CashFlowCashEquiv);
