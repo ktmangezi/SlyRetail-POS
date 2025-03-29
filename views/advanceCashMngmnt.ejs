@@ -47,6 +47,19 @@
         <!-- <div class="calenderContainer"> -->
         <div id="the-date">
             <input type="text" name="dateRange" id="dateRange">
+            <div class="dropdown">
+                <button class="dropdown-toggle storesBtn" type="button" data-bs-toggle="dropdown" aria-expanded="false"
+                    style="outline: none;border: none;background-color: transparent;">
+                    <md-icon class="shopIcon" style="margin-left: 8px;">
+                        <img src="images/shop2.png" alt="" srcset=""
+                            style="width: 23px;margin-top: -8px;margin-right: 6px;">
+                    </md-icon>
+                    <span class="shopStatusSpan" style="width: 20px;">All Stores</span>
+                </button>
+                <!-- <div class="paginationContainer" style="margin-top:-6%;"> -->
+                <ul class="dropdown-menu" id="shopNamesMenu">
+                </ul>
+            </div>
             <div class="searchBar" style="display:none;">
                 <div class="input-group rounded">
                     <input id="searchInput" type="search" class="form-control rounded" placeholder="Search"
@@ -56,6 +69,7 @@
                     </span>
                 </div>
             </div>
+
         </div>
         <!-- </div> -->
 
