@@ -82,18 +82,18 @@ const CashflowSchema = new mongoose.Schema({
     CashFlowType: {
         type: String
     },
+    StoreName: {
+        type: String
+    },
+    LoyverseId: {
+        type: String
+    },
+
     // Add more fields as needed
 });
-// Create a model based on the schema
-// const CashflowModel = mongoose.model('Cashflow', CashflowSchema);
-// export { CashflowModel };
-// export { CashflowSchema };
 const CashflowModel = (db) => {
     // Create the model with the specific connection
     return db.model('Cashflow', CashflowSchema);
 };
 export { CashflowModel };
-
-
-
 
