@@ -4,6 +4,7 @@ import { connectDB } from '../Schemas/slyretailDbConfig.js';
 import { CurrenciesModel } from '../Schemas/slyretailCurrenciesSchemas.js';
 import { accountingPeriodModel } from '../Schemas/slyretailAccountingPeriodSettingsSchemas.js';
 import { advaHeadersModel } from '../Schemas/slyretailAdvCashMngmntHeadersSettingsSchemas.js';
+import { CashflowCategoriesModel } from '../Schemas/slyretailCategoriesSchemas.js';
 import { CashflowModel } from '../Schemas/slyretailCashflowSchemas.js';
 import { versionControlModel } from '../Schemas/slyretailVersionControlSchemas.js';
 import { StoresModel } from '../Schemas/slyretailStoresSchemas.js';
@@ -29,7 +30,7 @@ async function signUpSignIn(req, databaseName, email, databasePassword, signingC
                 const myCurrenciesModelModel = CurrenciesModel(db);
                 const myCredentialsModelModel = CredentialsModel(db);
                 const myStoresModel = StoresModel(db);
-
+                const myCategoriesModel = CashflowCategoriesModel(db);
                 loggedInStatus = await createDatabase(email, databaseName, databasePassword);
                 req.session.userAccount = databaseName
 
@@ -61,6 +62,9 @@ async function signUpSignIn(req, databaseName, email, databasePassword, signingC
                                 console.error("Error creating collections", error);
                             }
                         }
+                        //save to category collection categorise suspense both type payin and payout
+                        const myC = db.collection('CostCentreCategories')
+
 
                         try {
                             const currencyEntry = new myCurrenciesModelModel({ Currency_Name: 'USD', paymentType: 'CASH', RATE: Number(1).toFixed(2), BASE_CURRENCY: 'Y' });
@@ -69,6 +73,18 @@ async function signUpSignIn(req, databaseName, email, databasePassword, signingC
                         } catch (error) {
                             console.error("Error inserting currencies", error);
                             return
+                        }
+                        const categoryData = [{ category: 'suspense', CategoryLimit: 0, CategoryLimitRange: '', Balance: 'PayIn' }, { category: 'suspense', CategoryLimit: 0, CategoryLimitRange: '', Balance: 'PayOut' }]
+                        try {
+                            try {
+                                // Using insertMany to insert multiple documents at once
+                                await myCategoriesModel.insertMany(categoryData);
+                            } catch (error) {
+                                console.error('Error saving catgories:', error);
+                            }
+
+                        } catch (error) {
+                            console.error('Error inserting headers:', error);
                         }
                         try {
                             //a collection called accounting period
@@ -279,7 +295,7 @@ async function signUpSignIn(req, databaseName, email, databasePassword, signingC
                 const myCurrenciesModelModel = CurrenciesModel(db);
                 const myCredentialsModelModel = CredentialsModel(db);
                 const existingVersion = await myversionControlModelModel.find();
-
+                const myCategoriesModel = CashflowCategoriesModel(db);
                 try {
                     const credentials = await myCredentialsModelModel.findOne({ DbPassword: databasePassword });
                     if (credentials) { //THEN CHECK ALSO IF THE PASSWORD IS THERE AND MATCHING
@@ -521,6 +537,40 @@ async function signUpSignIn(req, databaseName, email, databasePassword, signingC
                             }
                             catch (error) {
                                 console.error("Error saving store", error);
+                            }
+                        }
+                        //set the no stores cashflows to default store
+                        // check for the cashflows that dont have the field storename
+                        const myCashflowModelModel = CashflowModel(db);
+                        const cashflows = await myCashflowModelModel.find({ StoreName: { $exists: false } });
+                        for (const cashflow of cashflows) {
+                            try {
+                                await myCashflowModelModel.updateOne({ _id: cashflow._id }, { $set: { StoreName: 'DEFAULT' } });
+                            } catch (error) {
+                                console.error("Error saving cashflow", error);
+                            }
+                        }
+
+                        //add the category susspense if it dowsnt exist in categories both in type payin and payout
+                        const myCategoriesModel = CashflowCategoriesModel(db);
+                        // check fr category susspense in both payin type and payout type
+                        const categoryExistPayIn = await myCategoriesModel.findOne({ category: 'suspense', Balance: 'PayIn' });
+                        if (!categoryExistPayIn) {
+                            try {
+                                const categoryEntryPayIn = new myCategoriesModel({ category: 'suspense', CategoryLimit: 0, CategoryLimitRange: '', Balance: 'PayIn' });
+                                await categoryEntryPayIn.save();
+                            } catch (error) {
+                                console.error("Error saving PayIn category", error);
+                            }
+                        }
+
+                        const categoryExistPayOut = await myCategoriesModel.findOne({ category: 'suspense', Balance: 'PayOut' });
+                        if (!categoryExistPayOut) {
+                            try {
+                                const categoryEntryPayOut = new myCategoriesModel({ category: 'suspense', CategoryLimit: 0, CategoryLimitRange: '', Balance: 'PayOut' });
+                                await categoryEntryPayOut.save();
+                            } catch (error) {
+                                console.error("Error saving PayOut category", error);
                             }
                         }
                     }
