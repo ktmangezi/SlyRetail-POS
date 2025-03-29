@@ -15,6 +15,7 @@ body {
   transition: 0.5s ease;
   position: absolute;
 }
+
 .toolbar {
   background-color: rgb(1, 6, 105);
 }
@@ -185,7 +186,7 @@ td:hover {
   margin-left: 8px;
   position: relative;
   width: 100%;
-    height: 86%;
+  height: 86%;
 }
 
 #chartContainer {
@@ -312,10 +313,10 @@ input[type="checkbox"] {
   accent-color: rgb(1, 6, 105);
 }
 
-input.form-check-input {
+/* input.form-check-input {
   width: 13px;
   height: 13px;
-}
+} */
 
 #total-expenses-id {
   position: absolute;
@@ -569,8 +570,9 @@ input.form-check-input {
   position: absolute;
 }
 
-  
-#closeDelete2,#closeVatModal  {
+
+#closeDelete2,
+#closeVatModal {
   position: absolute;
   color: red;
   top: 37%;
@@ -593,6 +595,7 @@ input.form-check-input {
 .form-buttons button:hover {
   background-color: #006f8f;
 }
+
 .importForm {
   padding: 15px !important;
   transform-origin: top;
@@ -600,11 +603,13 @@ input.form-check-input {
   visibility: hidden;
   transition: transform 0.3s ease, opacity 0.3s ease;
 }
+
 .dropdown-menu.show {
   transform: scaleY(1);
   opacity: 1;
   visibility: visible;
   display: block !important;
+  z-index: 10;
 }
 
 #importForm h2 {
