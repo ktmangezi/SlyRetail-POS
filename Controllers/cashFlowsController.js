@@ -23,24 +23,38 @@ let databaseName = ""
 let signingCriteria = ""
 let anyUpdateSuccessful = ''
 
+
 export async function getCashFlowArray(req, startDate, endDate, pageSize, page, payInFilterCategory, payOutFilterCategory, advancedSearchInput, searchInput, payOutSearchInput, sessionId, selectedStoreName) {
     try {
         const db = await connectDB(req, databaseName, signingCriteria, sessionId);
         if (!db) {
             throw new Error('Failed to connect to the database');
         }
-        // Create the model with the specific connection
+
+        // Create the models with the specific connection
         const myCashflowModel = CashflowModel(db);
         const myCurrenciesModel = CurrenciesModel(db);
-        cashFlows = await myCashflowModel.find();
 
-        // Always Sort the array by 'income date' in ascending order
-        cashFlows.sort((a, b) => {
-            const [dayA, monthA, yearA] = a.CashFlowDate.split('/');
-            const [dayB, monthB, yearB] = b.CashFlowDate.split('/');
-            return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
-        });
+        // Fetch base currency
+        const baseCurrency = await myCurrenciesModel.findOne({ BASE_CURRENCY: 'Y' });
+        if (!baseCurrency) {
+            throw new Error('Base currency not found');
+        }
+        const baseRate = baseCurrency.RATE;
 
+        // Convert startDate and endDate to Zimbabwe timezone
+        const startDateZim = moment.tz(startDate, "Africa/Harare").startOf('day').toDate();
+        const endDateZim = moment.tz(endDate, "Africa/Harare").endOf('day').toDate();
+
+        // Build the query for cashflows
+        const query = {
+            ...(selectedStoreName && selectedStoreName !== "ALL STORES" && selectedStoreName !== "DEFAULT" && { StoreName: selectedStoreName }),
+            ...(selectedStoreName === "DEFAULT" && { $or: [{ StoreName: { $exists: false } }, { StoreName: { $in: [null, ""] } }] })
+        };
+
+        // Fetch and sort cashflows directly in the database
+        const cashFlows = await myCashflowModel.find(query).sort({ CashFlowDate: 1 });
+        // Initialize totals and arrays
         let totalExpensesPerRange = 0;
         let totalIncomePerRange = 0;
         let advSearchedInputTotal = 0;
@@ -57,109 +71,57 @@ export async function getCashFlowArray(req, startDate, endDate, pageSize, page, 
         let payInsearchedInputArray = [];
         let advSearchedInputArray = [];
 
-        // CHECK THE BASE CURRENCY
-        let myRate = '';
-        let baseCurrency = await myCurrenciesModel.findOne({ BASE_CURRENCY: 'Y' });
-        if (baseCurrency) {
-            myRate = baseCurrency.RATE;
-        }
+        // Process cashflows
+        for (const row of cashFlows) {
+            const date = row.CashFlowDate;
+            const parts = date.split("/");
+            const formattedDate = parts[1] + "/" + parts[0] + "/" + parts[2];
+            const formattedDates2 = new Date(formattedDate);
+            // Convert CashFlowDate to Zimbabwe timezone
+            const formattedDateZim = moment.tz(formattedDates2, "Africa/Harare").startOf('day').toDate();
+            // Recalculate the cash equivalent
+            const relativeRate = row.CashFlowRate / baseRate;
+            row.CashFlowCashEquiv = Number(parseFloat(row.CashFlowAmount) / parseFloat(relativeRate)).toFixed(2);
 
-        // Check if the existing cashflows have storeNames; if not, process them as default
-        const documentsWithoutStoreName = await myCashflowModel.find({
-            $or: [
-                { StoreName: { $exists: false } }, // Documents where StoreName does not exist
-                { StoreName: { $in: [null, ""] } } // Documents where StoreName is null or an empty string
-            ]
-        });
-
-        // Check if the default store exists
-        const defaultStore = await myCashflowModel.find({ StoreName: 'DEFAULT' });
-        for (let a = 0; a < cashFlows.length; a++) {
-            const row = cashFlows[a];
-            let isProcessed = false; // Flag to track if the document has been processed
-
-            // Function to perform data computations
-            function dataComputations() {
-                const date = row.CashFlowDate;
-                const parts = date.split("/");
-                const formattedDate = parts[1] + "/" + parts[0] + "/" + parts[2];
-                const formattedDates2 = new Date(formattedDate);
-
-                // Recalculate the cash equivalent based on the currency selected
-                const relativeRate = row.CashFlowRate / baseCurrency.RATE;
-                row.CashFlowCashEquiv = Number(parseFloat(row.CashFlowAmount) / parseFloat(relativeRate)).toFixed(2);
-
-                // Calculate the opening balance
-                const momntStartDate1 = moment.tz(startDate, "Africa/Harare").startOf('day'); // Midnight in Zimbabwe
-                let theBeforeStartDate1 = momntStartDate1.clone().subtract(1, "days");
-                theBeforeStartDate1 = moment.tz(theBeforeStartDate1.format("YYYY-MM-DD HH:mm:ss"), "Africa/Harare").toDate();
-
-                // Ensure formattedDates2 is also in Zimbabwe timezone
-                const formattedDates2Zim = moment.tz(formattedDates2, "Africa/Harare").startOf('day').toDate();
-
+            // Calculate opening balance
+            const theBeforeStartDate1 = moment(startDateZim).subtract(1, "days").toDate();
+            if (formattedDateZim <= theBeforeStartDate1) {
                 if (row.CashFlowType === "Payout") {
-                    if (theBeforeStartDate1.getTime() >= formattedDates2Zim.getTime()) {
-                        theBeforeExpenses += parseFloat(parseFloat(row.CashFlowCashEquiv).toFixed(2));
-                    }
+                    theBeforeExpenses += parseFloat(row.CashFlowCashEquiv);
                 } else if (row.CashFlowType === "Pay in") {
-                    if (theBeforeStartDate1.getTime() >= formattedDates2Zim.getTime()) {
-                        theBeforeIncome += parseFloat(parseFloat(row.CashFlowCashEquiv).toFixed(2));
-                    }
+                    theBeforeIncome += parseFloat(row.CashFlowCashEquiv);
                 }
+            }
 
-                if (startDate.getTime() <= formattedDates2.getTime() && formattedDates2.getTime() <= endDate.getTime()) {
-                    if (row.CashFlowType === 'Payout') {
-                        const match = (row.CashFlowDescription).toLowerCase().includes(advancedSearchInput);
-                        if (match) {
-                            payOutSearchedInputTotal += parseFloat(row.CashFlowCashEquiv);
-                            payOutsearchedInputArray.push(cashFlows[a]);
-                        }
-                        totalExpensesPerRangeAdv = parseFloat(totalExpensesPerRangeAdv) + parseFloat(row.CashFlowCashEquiv);
-                    }
-                    if (row.CashFlowType === 'Pay in') {
-                        const match = (row.CashFlowDescription).toLowerCase().includes(advancedSearchInput);
-                        if (match) {
-                            payInSearchedInputTotal += parseFloat(row.CashFlowCashEquiv);
-                            payInsearchedInputArray.push(cashFlows[a]);
-                        }
-                        totalIncomePerRangeAdv = parseFloat(totalIncomePerRangeAdv) + (row.CashFlowCashEquiv);
-                    }
-
-                    const match = (row.CashFlowDescription).toLowerCase().includes(advancedSearchInput);
+            // Filter by advanced search input
+            const match = (row.CashFlowDescription).toLowerCase().includes(advancedSearchInput)
+            if (formattedDateZim >= startDateZim && formattedDateZim <= endDateZim) {
+                if (row.CashFlowType === "Payout") {
+                    totalExpensesPerRange += parseFloat(row.CashFlowCashEquiv);
                     if (match) {
-                        advSearchedInputTotal = parseFloat(advSearchedInputTotal) + (row.CashFlowCashEquiv);
-                        advSearchedInputArray.push(cashFlows[a]);
-                    } else {
-                        allCashFlows.push(cashFlows[a]);
+                        payOutSearchedInputTotal += parseFloat(row.CashFlowCashEquiv);
+                        payOutsearchedInputArray.push(row);
                     }
-                }
-            }
-
-            // First, check if the selected store matches the row's store name
-            if (selectedStoreName && selectedStoreName !== "ALL STORES" && selectedStoreName !== "DEFAULT") {
-                // Case 1: Show only records that match the selected store
-                if (selectedStoreName === row.StoreName) {
-                    dataComputations();
-                }
-            }
-
-            // check for documents without StoreName
-            else if (selectedStoreName && selectedStoreName === "DEFAULT") {
-                if (documentsWithoutStoreName.some(doc => doc._id.toString() === row._id.toString())) {
-                    dataComputations();
+                    totalExpensesPerRangeAdv += parseFloat(row.CashFlowCashEquiv);
+                } else if (row.CashFlowType === "Pay in") {
+                    totalIncomePerRange += parseFloat(row.CashFlowCashEquiv);
+                    if (match) {
+                        payInSearchedInputTotal += parseFloat(row.CashFlowCashEquiv);
+                        payInsearchedInputArray.push(row);
+                    }
+                    totalIncomePerRangeAdv += parseFloat(row.CashFlowCashEquiv);
                 }
 
-                if (defaultStore.some(doc => doc._id.toString() === row._id.toString())) {
-                    dataComputations();
+                if (match) {
+                    advSearchedInputTotal += parseFloat(row.CashFlowCashEquiv);
+                    advSearchedInputArray.push(row);
+                } else {
+                    allCashFlows.push(row);
                 }
-            }
-            // check for "ALL STORES and include those with no store name field"
-            else if (selectedStoreName === 'ALL STORES') {
-                dataComputations();
             }
         }
 
-        // THE OPENING BALANCE FOR THE SELECTED RANGE
+        // Calculate opening balance
         const openingBalance = parseFloat(theBeforeIncome) - parseFloat(theBeforeExpenses);
 
         // Pagination logic
@@ -178,6 +140,7 @@ export async function getCashFlowArray(req, startDate, endDate, pageSize, page, 
         const advSearchedItemsToProcess = advSearchedInputArray.slice(startIndex, endIndex);
         const advSearchedTotalPages = Math.ceil(advSearchedInputArray.length / pageSize);
 
+        // Prepare the response data
         const data = {
             startDate: startDate,
             endDate: endDate,
@@ -202,6 +165,7 @@ export async function getCashFlowArray(req, startDate, endDate, pageSize, page, 
             advSearchedItemsToProcess: advSearchedItemsToProcess,
             advSearchedTotalPages: advSearchedTotalPages,
         };
+        // console.log(data)
         return { data };
     } catch (err) {
         console.error('Error connecting to MongoDB:', err);
