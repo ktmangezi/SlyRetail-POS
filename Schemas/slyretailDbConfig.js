@@ -46,6 +46,7 @@ const connectDB = async (req, databaseName, signingCriteria, sessionId) => {
         }
 
         if (signingCriteria === "Sign In") {
+
             // Reuse existing connection if it exists
             if (connections[normalizedDatabaseName]) {
                 connection = connections[normalizedDatabaseName];
@@ -114,6 +115,7 @@ const connectDB = async (req, databaseName, signingCriteria, sessionId) => {
             });
         });
         //RETURN THE QUALIFYING CONNECTION
+        // console.log(connection)
         return connection
 
     } catch (error) {
