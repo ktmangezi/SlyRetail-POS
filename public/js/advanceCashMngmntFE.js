@@ -105,28 +105,19 @@ fetch('/currencies')
                                 const currMonth = de.getMonth();
                                 const currYear = de.getFullYear();
 
-                                if (sDate === null && eDate === null) {
+                                if ((sDate === null && eDate === null) || eDate === '') {
                                     //IF THERE IS NO DATE IN THE LOCAL STORAGE, SET THE RANGE FROM THE FIRST (startDate) DAY TO NOW(endDate)
-                                    for (let i = 1; i < currentDay + 1; i++) {
-                                        const date = new Date(currYear, currMonth, i);
-                                        if (i === 1) {
-                                            startDate = date;
-                                        }
-                                        else {
-                                            endDate = date;
-                                        }
-                                    }
-
-                                    //set the l/s to have the startDate and endDate
+                                    startDate = new Date(currYear, currMonth, 1); // First day of the current month
+                                    endDate = new Date(currYear, currMonth, currentDay); // Current day of the month
                                     // Store the start and end date values in localStorage
                                     localStorage.setItem('firstDate', startDate);
                                     localStorage.setItem('lastDate', endDate);
 
                                 } else {
-                                    // let startDate = ""
-                                    // let endDate = ""
+
                                     startDate = new Date(sDate)
                                     endDate = new Date(eDate)
+
                                 }
                                 //style the edit and export button on pagee reload
                                 // document.querySelector(".editBtn").classList.add('editBtnStyle')
@@ -1329,7 +1320,18 @@ fetch('/currencies')
                                     defaultDisplayContent2(startDate, endDate)
                                 });
                                 //=========================================================================================================
+
                                 async function defaultDisplayContent2(startDate, endDate) {
+                                    // if enddate is empty,fill it with the current date
+                                    startDate = localStorage.getItem('firstDate')
+                                    endDate = localStorage.getItem('lastDate')
+                                    console.log('START DATE', startDate);
+                                    console.log('END DATE', endDate);
+                                    // if (endDate === '') {
+                                    //     endDate = new Date()
+                                    // }
+                                    // console.log('START DATE', startDate);
+                                    // console.log('END DATE', endDate);
                                     cashFlowArray = []
                                     //GET THE L/S STORED STARTIND DATE AND THE END DATE
                                     //GET THE L/S PAGE SIZE AND PAGE NUIMBER
@@ -6858,6 +6860,8 @@ fetch('/currencies')
                                     },
                                         //AFTER EVERY SPECIFIED DATE RANGE, THIS FUNCTION IS CALLED
                                         function (startDate, endDate) {
+                                            console.log('START DATE', startDate);
+                                            console.log('END DATE', endDate);
                                             // Store the start and end date values in localStorage
                                             localStorage.setItem("firstDate", startDate);
                                             localStorage.setItem("lastDate", endDate);
@@ -6896,6 +6900,8 @@ fetch('/currencies')
                                                 defaultDisplayContent(startDate, endDate)
                                             }
                                             if (editMode === null) {
+                                                console.log('START DATE', startDate);
+                                                console.log('END DATE', endDate);
                                                 //load the loader here
                                                 displaySpinner()
                                                 startDate = new Date(startDate)
