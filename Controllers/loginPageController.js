@@ -9,6 +9,7 @@ import { CashflowModel } from '../Schemas/slyretailCashflowSchemas.js';
 import { versionControlModel } from '../Schemas/slyretailVersionControlSchemas.js';
 import { StoresModel } from '../Schemas/slyretailStoresSchemas.js';
 import { v4 as uuidv4 } from 'uuid';
+import e from 'express';
 let cashFlows = []
 
 let loggedInStatus = "False";
@@ -168,139 +169,197 @@ async function signUpSignIn(req, databaseName, email, databasePassword, signingC
             }
 
         }
+        // function for all migration purposes
 
         if (signingCriteria === "Sign In") {
-            try {
-                // First check across all databases for the email
-                const adminClient = new MongoClient("mongodb+srv://slyretailpos:1234marsr@cluster0.kv9k65a.mongodb.net/?retryWrites=true&w=majority", {
-                    useNewUrlParser: true,
-                    useUnifiedTopology: true
+            let db;
+
+            const adminClient = new MongoClient("mongodb+srv://slyretailpos:1234marsr@cluster0.kv9k65a.mongodb.net/?retryWrites=true&w=majority", {
+                useNewUrlParser: true,
+                useUnifiedTopology: true,
+                serverSelectionTimeoutMS: 5000, // Timeout after 5 seconds if unable to connect to the server
+                socketTimeoutMS: 10000 // Timeout after 10 seconds for socket inactivity
+
+            });
+
+            await adminClient.connect();
+            const adminDb = adminClient.db('admin');
+
+            // Get list of all databases
+            const allDatabases = (await adminDb.admin().listDatabases()).databases
+                .filter(db => db.name.startsWith('user_') || db.name === databaseName);
+
+            let newDBName = '';
+            let targetDbName = null;
+            let needsMigration = false;
+
+            // Search all databases for the email
+            for (const dbInfo of allDatabases) {
+                const tempDb = adminClient.db(dbInfo.name);
+                const credentialsCollection = tempDb.collection('users'); // Adjust collection name if needed
+
+                const user = await credentialsCollection.findOne({
+                    User_Account: databaseName
                 });
 
-                await adminClient.connect();
-                const adminDb = adminClient.db('admin');
+                if (user) {
+                    const mytoken = await credentialsCollection.findOne({ thirdPartyToken: { $exists: false } });
+                    if (mytoken) {
+                        console.log('token field doesnt exist.creating one')
+                        try {
+                            await credentialsCollection.updateOne({ _id: user._id }, { $set: { thirdPartyToken: '' } });
+                        } catch (error) {
+                            console.error("Error saving cashflow", error);
+                        }
+                    }
 
-                // Get list of all databases
-                const allDatabases = (await adminDb.admin().listDatabases()).databases
-                    .filter(db => db.name.startsWith('user_') || db.name === databaseName);
+                    if (user.userId) {
+                        // Found with userId - use this database
+                        targetDbName = dbInfo.name;
+                        break;
+                    } else {
+                        // Found without userId - mark for migration
+                        targetDbName = dbInfo.name;
+                        needsMigration = true;
+                        break;
+                    }
+                }
 
-                let targetDbName = null;
-                let needsMigration = false;
+            }
+            req.session.userAccount = databaseName
+            if (!targetDbName) {
+                // No database found with this email
+                loggedInStatus = "The User Does Not Exist";
+                return { loggedInStatus, existingthirdPartyToken };
+            }
+            if (needsMigration) {
+                // Migrate data (using your existing migrateTenantDatabase function)
+                newDBName = await migrateTenantDatabase(databaseName);
+                console.log(`Migration complete! New database: ${newDBName}`)
+                try {
+                    db = await connectDB(req, newDBName, signingCriteria);
+                    if (!db) {
+                        //THIS IS WHEN THE DATABASE NAME IS ALREADY EXISTING WITHIN THE SYSTEM, AND IT HAS BEEN CONFIRMED BY DBCONFIG
+                        loggedInStatus = "The User Does Not Exist";
+                        console.log("Login status:", loggedInStatus);
+                        return { loggedInStatus, existingthirdPartyToken };
+                    }
+                    const myCredentialsModelModel = CredentialsModel(db);
+                    await myCredentialsModelModel.updateOne(
+                        { User_Account: databaseName },
+                        { $set: { userId: newDBName } },
+                        { upsert: true } // This will create the field if it doesn't exist
+                    );
+                    // console.log(`Updated userId in credentials for ${databaseName} to ${newDBName}`);
+                } catch (error) {
+                    console.error("Error updating userId in credentials:", error);
+                }
+                //  Delete old DB after successful migration
+                try {
+                    await adminClient.db(targetDbName).command({ dropDatabase: 1 });
+                } catch (error) {
+                    console.error(`Failed to delete old database: ${databaseName}`, error);
+                }
 
-                // Search all databases for the email
-                for (const dbInfo of allDatabases) {
-                    const tempDb = adminClient.db(dbInfo.name);
-                    const credentialsCollection = tempDb.collection('users'); // Adjust collection name if needed
+            } else {
+                // Connect to existing valid database
+                db = await connectDB(req, targetDbName, signingCriteria);
+            }
+            async function migrateTenantDatabase(oldDBName, batchSize = 1000) {
+                try {
+                    const oldDB = adminClient.db(oldDBName);
+                    const newDBName = `user_${uuidv4().replace(/-/g, '').substring(0, 22)}`;
+                    const newDB = adminClient.db(newDBName);
 
-                    const user = await credentialsCollection.findOne({
-                        User_Account: databaseName
-                    });
+                    const collections = (await oldDB.listCollections().toArray())
+                        .filter(coll => !coll.name.startsWith('system.'));
 
-                    if (user) {
-                        if (user.userId) {
-                            // Found with userId - use this database
-                            targetDbName = dbInfo.name;
-                            break;
+                    // Process collections in parallel with progress
+                    let migrated = 0;
+                    const results = await Promise.all(collections.map(async coll => {
+                        const oldColl = oldDB.collection(coll.name);
+                        const newColl = newDB.collection(coll.name);
+
+                        const count = await migrateCollection(oldColl, newColl, batchSize);
+                        // console.log(`Migrated ${coll.name}: ${count} docs`);
+                        console.time(`Migrate ${coll.name}`);
+                        migrated++;
+                        console.log(`[${migrated}/${collections.length}] Migrated ${coll.name}: ${count} docs`);
+
+                        return { name: coll.name, count };
+                    }));
+                    // Verification
+                    for (const coll of collections) {
+                        const [oldCount, newCount] = await Promise.all([
+                            oldDB.collection(coll.name).countDocuments(),
+                            newDB.collection(coll.name).countDocuments()
+                        ]);
+
+                        if (oldCount !== newCount) {
+                            throw new Error(`Count mismatch in ${coll.name} (old: ${oldCount}, new: ${newCount})`);
+                        }
+                    }
+                    return newDBName;
+                } catch (err) {
+                    console.error('Migration failed:', err);
+                    throw err;
+                }
+            }
+
+            async function migrateCollection(oldColl, newColl, batchSize = 1000) {
+                let count = 0;
+                let cursor = oldColl.find().batchSize(batchSize);
+
+                while (await cursor.hasNext()) {
+                    const batch = [];
+                    for (let i = 0; i < batchSize && await cursor.hasNext(); i++) {
+                        batch.push(await cursor.next());
+                    }
+
+                    if (batch.length > 0) {
+                        await newColl.insertMany(batch, { ordered: false });
+                        count += batch.length;
+                    }
+                    // else create the collection those where baatch is 0
+                    else {
+                        const db = newColl.db; // Get the database object
+                        const existingCollections = await db.listCollections({ name: newCollection }).toArray();
+                        console.log(existingCollections)
+                        const newCollection = oldColl.collectionName;
+                        console.log(newCollection)
+                        if (existingCollections.length === 0) {
+                            await db.createCollection(newCollection);
+                            console.log(`Collection ${newCollection} created successfully.`);
                         } else {
-                            // Found without userId - mark for migration
-                            targetDbName = dbInfo.name;
-                            needsMigration = true;
-                            break;
+                            console.log(`Collection ${newCollection} already exists.`);
                         }
                     }
 
+
+
                 }
-                req.session.userAccount = databaseName
+                return count;
+            }
 
-                if (!targetDbName) {
-                    // No database found with this email
-                    loggedInStatus = "The User Does Not Exist";
-                    return { loggedInStatus, existingthirdPartyToken };
-                }
-                let db;
-                if (needsMigration) {
-                    // Migrate data (using your existing migrateTenantDatabase function)
-                    const newDBName = await migrateTenantDatabase(databaseName);
-                    console.log(`Migration complete! New database: ${newDBName}`)
-                    try {
-                        db = await connectDB(req, newDBName, signingCriteria);
-                        if (!db) {
-                            //THIS IS WHEN THE DATABASE NAME IS ALREADY EXISTING WITHIN THE SYSTEM, AND IT HAS BEEN CONFIRMED BY DBCONFIG
-                            loggedInStatus = "The User Does Not Exist";
-                        }
-                        const myCredentialsModelModel = CredentialsModel(db);
-                        await myCredentialsModelModel.updateOne(
-                            { User_Account: databaseName },
-                            { $set: { userId: newDBName } },
-                            { upsert: true } // This will create the field if it doesn't exist
-                        );
-                        // console.log(`Updated userId in credentials for ${databaseName} to ${newDBName}`);
-                    } catch (error) {
-                        console.error("Error updating userId in credentials:", error);
-                    }
-                    // Delete old DB after successful migration
-                    try {
-                        await adminClient.db(databaseName).command({ dropDatabase: 1 });
-                    } catch (error) {
-                        console.error(`Failed to delete old database: ${databaseName}`, error);
-                    }
+            try {
 
-                } else {
-                    // Connect to existing valid database
-                    db = await connectDB(req, targetDbName, signingCriteria);
-                }
-                async function migrateTenantDatabase(oldDBName) {
-                    try {
-                        const oldDB = adminClient.db(oldDBName);
-                        // Generate new DB name (22-char UUID without hyphens)
-                        const newDBName = `user_${uuidv4().replace(/-/g, '').substring(0, 22)}`;
-                        const newDB = adminClient.db(newDBName);
-                        // Get all collections (excluding system collections)
-                        const collections = (await oldDB.listCollections().toArray())
-                            .filter(coll => !coll.name.startsWith('system.'));
-                        // Copy each collection
-                        for (const coll of collections) {
-                            const docs = await oldDB.collection(coll.name).find().toArray();
-
-                            if (docs.length > 0) {
-                                await newDB.collection(coll.name).insertMany(docs, { ordered: false });
-                            }
-                            else {
-                                //create the collection that dont have data to insert
-                                await newDB.createCollection(coll.name);
-                            }
-                            // console.log(` Copied ${docs.length} documents to ${newDBName}.${coll.name}`);
-                        }
-
-                        // Verify counts match (optional)
-                        for (const coll of collections) {
-                            const oldCount = await oldDB.collection(coll.name).countDocuments();
-                            const newCount = await newDB.collection(coll.name).countDocuments();
-                            if (oldCount !== newCount) {
-                                throw new Error(`Count mismatch in ${coll.name} (old: ${oldCount}, new: ${newCount})`);
-                            }
-                        }
-                        return newDBName;
-                    } catch (err) {
-                        console.error('Migration failed:', err);
-                        throw err;
-                    }
-                }
-
-
-                // Create the model with the specific connection
                 const myAdvHeadersModelModel = advaHeadersModel(db);
                 const myCashflowModelModel = CashflowModel(db);
                 const myversionControlModelModel = versionControlModel(db);
                 const myCurrenciesModelModel = CurrenciesModel(db);
                 const myCredentialsModelModel = CredentialsModel(db);
-                const existingVersion = await myversionControlModelModel.find();
                 const myCategoriesModel = CashflowCategoriesModel(db);
                 try {
                     const credentials = await myCredentialsModelModel.findOne({ DbPassword: databasePassword });
                     if (credentials) { //THEN CHECK ALSO IF THE PASSWORD IS THERE AND MATCHING
                         loggedInStatus = "True";
-
+                        if (credentials.thirdPartyToken !== '') {
+                            req.session.thirdPartyToken = credentials.thirdPartyToken
+                            existingthirdPartyToken = credentials.thirdPartyToken
+                        }
+                        else {
+                            existingthirdPartyToken = 'no token'
+                        }
                         currencies = await myCurrenciesModelModel.find()
                     } else {
                         loggedInStatus = "Password Do Not Match";
@@ -310,282 +369,193 @@ async function signUpSignIn(req, databaseName, email, databasePassword, signingC
                     console.error("Error occurred while querying CredentialsModel:", error);
                     return
                 }
+                //create versioncontrols collection if it doesnt exist and create a version control document with version 1.4
+                const existingVersionControl = await myversionControlModelModel.findOne({ version: currentVersion });
+                if (!existingVersionControl) {
+                    const newVersionEntry = new myversionControlModelModel({ version: currentVersion });
+                    await newVersionEntry.save();
+                    console.log('New version entry saved successfully!');
+                }
                 //==============================================================
-                //first check if the versioncontrols collection exist,if not create it
-                //FOR UPGRADES
-                try {
-                    const collections = await db.db.listCollections().toArray();
-                    const collectionName = 'versioncontrols'
-                    const collectionExists = collections.some(col => col.name === collectionName);
-
-                    if (!collectionExists) {
-                        //this is to keep the current structure of databases, the web interface does not have a version but the database will need to be controlled
-                        const newVersionEntry = new myversionControlModelModel({ version: currentVersion });
-                        await newVersionEntry.save()
-                            .then(() => console.log('New version entry saved successfully!'))
-                            .catch(error => {
-                                console.error('Error saving version entry:', error);
-                                if (error.errors) {
-                                    console.log('Validation errors:', error.errors);
-                                }
-                            });
-                    }
-                } catch (error) {
-                    console.error("Error occurred while saving version:", error);
-                    return
-                }
-                //===================================================
-
-                existingthirdPartyToken = await getExistingToken();
-                async function getExistingToken() {
-                    const mytoken = await myCredentialsModelModel.findOne({ thirdPartyToken: { $exists: true } });
+                const existingVersion = await myversionControlModelModel.find();
+                async function handleDatabaseUpgrades(db, currentVersion) {
                     try {
-                        if (mytoken) {
-                            if (mytoken.thirdPartyToken !== '') {
-                                req.session.thirdPartyToken = mytoken.thirdPartyToken
-                                existingthirdPartyToken = mytoken.thirdPartyToken
-                            }
-                            else {
-                                existingthirdPartyToken = 'no token'
-                            }
-                            return existingthirdPartyToken
-                        }
-                    } catch (error) {
-                        console.error("Error occurred while querying CredentialsModel:", error);
-                        return
-                    }
-                }
-                //================================================================
+                        const versionControlModel = myversionControlModelModel;
+                        const cashflowModel = myCashflowModelModel;
+                        const headersModel = myAdvHeadersModelModel;
+                        const storesModel = StoresModel(db);
+                        const categoriesModel = CashflowCategoriesModel(db);
 
-                try {
-                    // const db = await connectDB(databaseName, signingCriteria); // Reuse the connection globally
-                    const cashflowData = db.collection('cashflows')
-                    const CashflowData = await cashflowData.find().toArray()
-                    //get the currencies
-                    currencies = await myCurrenciesModelModel.find()
+                        // Get current version
+                        const existingVersion = await versionControlModel.find().sort({ _id: -1 }).limit(1);
+                        if (!existingVersion.length) return;
+                        console.log(currentVersion)
+                        const currentDBVersion = existingVersion[0].version;
 
+                        // Define upgrade steps
+                        const upgradeSteps = {
+                            '1.2': async () => {
+                                console.log('Running upgrade to 1.2');
+                                const cashFlows = await cashflowModel.find();
 
-                    //next upgrade from 1 to 1.2
-                    if (existingVersion[0].version === "1.2" && existingVersion[0].version !== currentVersion) {
-                        try {
-                            // Loop through each cash flow document
-                            const cashFlows = await myCashflowModelModel.find();
-                            for (let a = 0; a < cashFlows.length; a++) {
-                                const row = cashFlows[a];
-                                // Initialize Tax.vat if it doesn't exist
-                                const documentVat = row.Tax.vat
-                                const documentZtf = row.Tax.ztf
-                                // Update Tax.vat and Tax.ztf for each row where Vat exists
-                                if (documentVat.ZimraFsNo === '0') {
-                                    documentVat.ZimraFsNo = ''
-                                }
-                                row.Tax.vat = {
-                                    QRCode: documentVat.QRCode || '',       // Use actual values from documentVat
-                                    DeviceId: documentVat.DeviceId || 0,
-                                    ZimraFsNo: documentVat.ZimraFsNo || '',
-                                    VatNumber: documentVat.VatNumber || 0,             // Setting the VatNumber as 0
-                                    TinNumber: documentVat.TinNumber || 0,             // Setting the TinNumber as 0
-                                    VatAmount: documentVat.VatAmount || 0,    // Corrected VatAmount reference
-                                    VatStatus: documentVat.VatStatus || 'N' // Use VatStatus from Vat
-                                };
-                                row.Tax.ztf = {
-                                    First: documentZtf.First || '',       // Use actual values from Vat
-                                    Second: documentZtf.Second || '',
-                                    LevyAmount: documentZtf.LevyAmount || 0,
-                                    ZtfStatus: documentZtf.ZtfStatus || 'N',
-                                }
+                                for (const row of cashFlows) {
+                                    // Initialize tax objects if they don't exist
+                                    row.Tax = row.Tax || {};
+                                    row.Tax.vat = row.Tax.vat || {};
+                                    row.Tax.ztf = row.Tax.ztf || {};
 
-                                const cashflowEntry = new myCashflowModelModel(row);
-                                await cashflowEntry.save();
-                            }
-                        }
-                        catch (error) {
-                            console.error("Error during the operation:", error);
-                        }
-                        //set the latest version currentVersion
-                        await myversionControlModelModel.updateOne(
-                            { _id: ObjectId(existingVersion[0]._id) },
-                            { $set: { version: currentVersion } } // Correct
-                        )
-                    }
-                    //next upgrade (from 1.2 to 1.3) to tax
-                    if (existingVersion[0].version === "1.3" && existingVersion[0].version !== currentVersion) { //and it must not be equal to the currentVersion
-                        try {
-                            // Log the filtered data to verify if Vat exists and is not empty
-                            const vatExistsAndNotEmpty = CashflowData.filter(row =>
-                                row.Vat && typeof row.Vat === 'object' && Object.keys(row.Vat).length > 0
-                            );
-                            // Loop through each cash flow document
-                            const cashFlows = await myCashflowModelModel.find();
-                            for (let a = 0; a < cashFlows.length; a++) {
-                                const row = cashFlows[a];
-
-                                // Initialize Tax if it doesn't exist
-                                if (!row.Tax) {
-                                    row.Tax = {};  // Ensure Tax is an object
-                                }
-
-                                // Initialize Tax.vat if it doesn't exist
-                                row.Tax.vat = row.Tax.vat || {};  // Ensure Tax.vat is an object if it doesn't exist
-                                row.Tax.ztf = row.Tax.ztf || {};  // Ensure Tax.ztf is an object if it doesn't exist
-                                // Update Tax.vat and Tax.ztf for each row where Vat exists
-                                vatExistsAndNotEmpty.forEach(documentVat => {
-                                    const documentZtf = row.Tax.ztf
-                                    if (documentVat.ZimraFsNo === '0') {
-                                        documentVat.ZimraFsNo = ''
-                                    } row.Tax.vat = {
-                                        QRCode: documentVat.QRCode || '',       // Use actual values from documentVat
-                                        DeviceId: documentVat.DeviceId || 0,
-                                        ZimraFsNo: documentVat.ZimraFsNo || '',
-                                        VatNumber: documentVat.VatNumber || 0,             // Setting the VatNumber as 0
-                                        TinNumber: documentVat.TinNumber || 0,             // Setting the TinNumber as 0
-                                        VatAmount: documentVat.VatAmount || 0,    // Corrected VatAmount reference
-                                        VatStatus: documentVat.VatStatus || 'N' // Use VatStatus from Vat
+                                    // Update VAT data
+                                    if (row.Tax.vat.ZimraFsNo === '0') {
+                                        row.Tax.vat.ZimraFsNo = '';
                                     }
+
+                                    // Standardize VAT structure
+                                    row.Tax.vat = {
+                                        QRCode: row.Tax.vat.QRCode || '',
+                                        DeviceId: row.Tax.vat.DeviceId || 0,
+                                        ZimraFsNo: row.Tax.vat.ZimraFsNo || '',
+                                        VatNumber: row.Tax.vat.VatNumber || 0,
+                                        TinNumber: row.Tax.vat.TinNumber || 0,
+                                        VatAmount: row.Tax.vat.VatAmount || 0,
+                                        VatStatus: row.Tax.vat.VatStatus || 'N'
+                                    };
+
+                                    // Standardize ZTF structure
                                     row.Tax.ztf = {
-                                        First: documentZtf.First || '',       // Use actual values from Vat
-                                        Second: documentZtf.Second || '',
-                                        LevyAmount: documentZtf.LevyAmount || 0,
-                                        ZtfStatus: documentZtf.ZtfStatus || 'N',
-                                    }
+                                        First: row.Tax.ztf.First || '',
+                                        Second: row.Tax.ztf.Second || '',
+                                        LevyAmount: row.Tax.ztf.LevyAmount || 0,
+                                        ZtfStatus: row.Tax.ztf.ZtfStatus || 'N'
+                                    };
 
-                                });
-                                const cashflowEntry = new myCashflowModelModel(row);
-                                await cashflowEntry.save();
-                                // remove the Vat field using $unset directly on the database 
-                                cashflowData.updateOne(
-                                    { _id: row._id }, // Find the document by its _id
-                                    {
-                                        $unset: { "Vat": "" }      // Remove the Vat field
+                                    await row.save();
+                                }
+                            },
+                            '1.3': async () => {
+                                console.log('Running upgrade to 1.3');
+                                // Remove Vat field and ensure Tax field exists
+                                await cashflowModel.updateMany(
+                                    {},
+                                    [
+                                        {
+                                            $set: {
+                                                Tax: {
+                                                    $ifNull: ["$Tax", {}],
+                                                    vat: { $ifNull: ["$Tax.vat", {}] },
+                                                    ztf: { $ifNull: ["$Tax.ztf", {}] }
+                                                }
+                                            }
+                                        },
+                                        { $unset: "Vat" }
+                                    ]
+                                );
+
+                                // Update header names
+                                await headersModel.updateOne(
+                                    { HeaderName: 'Vat' },
+                                    { $set: { HeaderName: 'Tax' } }
+                                );
+
+                                // Ensure Type header exists
+                                if (!await headersModel.findOne({ HeaderName: 'Type' })) {
+                                    await new headersModel({ HeaderName: 'Type', isDisplayed: true }).save();
+                                }
+                            },
+                            '1.4': async () => {
+                                console.log('Running upgrade to 1.4');
+                                // Ensure default store exists
+                                if (!await storesModel.findOne({ StoreName: 'DEFAULT' })) {
+                                    await new storesModel({ StoreName: 'DEFAULT', StoreId: '1' }).save();
+                                }
+
+                                // Update cashflows with default store and empty LoyverseId
+                                await cashflowModel.updateMany(
+                                    { StoreName: { $exists: false } },
+                                    { $set: { StoreName: 'DEFAULT' } }
+                                );
+
+                                await cashflowModel.updateMany(
+                                    { LoyverseId: { $exists: false } },
+                                    { $set: { LoyverseId: '' } }
+                                );
+
+                                const categoryExistPayIn = await myCategoriesModel.findOne({ category: 'suspense', Balance: 'PayIn' });
+                                if (!categoryExistPayIn) {
+                                    await new myCategoriesModel({ category: 'suspense', Balance: 'PayIn' }).save();
+                                }
+                                const categoryExistPayOut = await myCategoriesModel.findOne({ category: 'suspense', Balance: 'PayOut' });
+                                if (!categoryExistPayOut) {
+                                    await new myCategoriesModel({ category: 'suspense', Balance: 'PayOut' }).save();
+                                }
+                                const database = db.db; // Ensure db is the database object
+                                const existingCollections = await database.listCollections().toArray();
+                                const collectionNames = [
+                                    'CostCentreCategories', "Customers", 'Employees', "Invoices", "Products", 'Sales', "Suppliers", 'Vouchers'
+                                ];
+                                const existingCollectionNames = existingCollections.map(coll => coll.name);
+                                for (let i = 0; i < collectionNames.length; i++) {
+                                    if (!existingCollectionNames.includes(collectionNames[i])) {
+                                        try {
+                                            await database.createCollection(collectionNames[i]);
+                                            // console.log(`Collection ${collectionNames[i]} created successfully.`);
+                                        } catch (error) {
+                                            console.error(`Error creating collection ${collectionNames[i]}`, error);
+                                        }
                                     }
+                                }
+                            }
+                        };
+
+                        // Execute necessary upgrades in order
+                        const versions = ['1.2', '1.3', '1.4'];
+                        const currentIndex = versions.indexOf(currentDBVersion);
+
+                        if (currentIndex === -1) {
+                            console.log(`Current version ${currentDBVersion} not in upgrade path`);
+                            return;
+                        }
+
+                        for (let i = currentIndex; i < versions.length; i++) {
+                            const targetVersion = versions[i];
+                            // console.log(`Upgrading from ${currentDBVersion} to ${targetVersion}`);
+                            if (upgradeSteps[targetVersion]) {
+                                await upgradeSteps[targetVersion]();
+
+                                // Update version after successful upgrade
+                                await versionControlModel.updateOne(
+                                    { _id: existingVersion[0]._id },
+                                    { $set: { version: targetVersion } }
                                 );
                             }
                         }
-                        catch (error) {
-                            console.error("Error during the operation:", error);
+
+                        // Final version update
+                        if (currentDBVersion !== currentVersion) {
+                            await versionControlModel.updateOne(
+                                { _id: existingVersion[0]._id },
+                                { $set: { version: currentVersion } }
+                            );
                         }
 
-                        //CHANGE HEADERNAME vAT TO tAX 
-
-                        try {
-                            await myAdvHeadersModelModel.updateOne({ HeaderName: 'Vat' }, {
-                                $set: {
-                                    HeaderName: 'Tax'
-                                }
-                            }).then(result => {
-                                console.log(`${result.modifiedCount} document(s) updated.`);
-
-                            })
-                            // Check if the document already exists with HeaderName: 'Type'
-                            const existingHeader = await myAdvHeadersModelModel.findOne({ HeaderName: 'Type' });
-
-                            if (!existingHeader) {
-                                // If the document doesn't exist, create a new one
-                                const newHeader = new myAdvHeadersModelModel({ HeaderName: 'Type', isDisplayed: true });
-                                const result = await newHeader.save();
-                            }
-
-                        } catch (err) {
-                            console.error('Error connecting to MongoDB:', err);
-                        }
-                        //set the latest version currentVersion
-                        await myversionControlModelModel.updateOne({ _id: ObjectId(existingVersion[0]._id) },
-                            { set: { version: currentVersion } });
-                        // }
-
+                        // console.log('Database upgrades completed successfully');
+                    } catch (error) {
+                        console.error('Error during database upgrades:', error);
+                        throw error;
                     }
-                    //next upgrade from 1.3 to 1.4
-                    if (existingVersion[0].version === "1.3") {
-                        console.log('updating to latest version')
-                        try {
-                            if (existingVersion.length > 0) {
-                                // Update the version field
-                                const updateResult = await myversionControlModelModel.updateOne(
-                                    { _id: ObjectId(existingVersion[0]._id) }, // Filter by _id
-                                    { $set: { version: currentVersion } } // Update the version field
-                                );
-
-                                if (updateResult.modifiedCount > 0) {
-                                    console.log('Version updated successfully');
-                                } else {
-                                    console.log('No changes were made');
-                                }
-                            } else {
-                                console.log('No existing version document found');
-                            }
-                        } catch (error) {
-                            console.error('Error updating version:', error);
-                        }
-                    }
-                    if (existingVersion[0].version === "1.4") {
-                        //A MISTAKE MADE ON NOT INCLUDING TYPE HEADER STATUS IN THE ADV HEADER SETTINGS
-                        // Check if the document already exists with HeaderName: 'Type'
-                        const existingHeader = await myAdvHeadersModelModel.findOne({ HeaderName: 'Type' });
-
-                        if (!existingHeader) {
-                            // If the document doesn't exist, create a new one
-                            const newHeader = new myAdvHeadersModelModel({ HeaderName: 'Type', isDisplayed: true });
-                            await newHeader.save();
-                        }
-                        //first check if it not already exist in the database
-                        const myStoresModel = StoresModel(db);
-                        const storeExist = await myStoresModel.findOne({ StoreName: 'DEFAULT' });
-                        if (!storeExist) {
-                            try {
-                                const storeEntry = new myStoresModel({ StoreName: 'DEFAULT', StoreId: '1' });
-                                await storeEntry.save()
-                            }
-                            catch (error) {
-                                console.error("Error saving store", error);
-                            }
-                        }
-                        //set the no stores cashflows to default store
-                        // check for the cashflows that dont have the field storename
-                        const myCashflowModelModel = CashflowModel(db);
-                        const cashflows = await myCashflowModelModel.find({ StoreName: { $exists: false } });
-                        for (const cashflow of cashflows) {
-                            try {
-                                await myCashflowModelModel.updateOne({ _id: cashflow._id }, { $set: { StoreName: 'DEFAULT' } });
-                            } catch (error) {
-                                console.error("Error saving cashflow", error);
-                            }
-                        }
-
-                        //add the category susspense if it dowsnt exist in categories both in type payin and payout
-                        const myCategoriesModel = CashflowCategoriesModel(db);
-                        // check fr category susspense in both payin type and payout type
-                        const categoryExistPayIn = await myCategoriesModel.findOne({ category: 'suspense', Balance: 'PayIn' });
-                        if (!categoryExistPayIn) {
-                            try {
-                                const categoryEntryPayIn = new myCategoriesModel({ category: 'suspense', CategoryLimit: 0, CategoryLimitRange: '', Balance: 'PayIn' });
-                                await categoryEntryPayIn.save();
-                            } catch (error) {
-                                console.error("Error saving PayIn category", error);
-                            }
-                        }
-
-                        const categoryExistPayOut = await myCategoriesModel.findOne({ category: 'suspense', Balance: 'PayOut' });
-                        if (!categoryExistPayOut) {
-                            try {
-                                const categoryEntryPayOut = new myCategoriesModel({ category: 'suspense', CategoryLimit: 0, CategoryLimitRange: '', Balance: 'PayOut' });
-                                await categoryEntryPayOut.save();
-                            } catch (error) {
-                                console.error("Error saving PayOut category", error);
-                            }
-                        }
-                    }
-
-                } catch (error) {
-                    console.error("Error occurred while saving version:", error);
-                    return
                 }
-
+                // In your main code
+                try {
+                    await handleDatabaseUpgrades(db, "1.4");
+                } catch (error) {
+                    console.error("Failed to complete database upgrades:", error);
+                }
             } catch (error) {
                 console.error("Error occurred while connecting to database:", error);
                 return
             }
 
         }
+        // Return the logged-in status and existing third-party token
         return { loggedInStatus: loggedInStatus, existingthirdPartyToken: existingthirdPartyToken }
     } catch (error) {
         console.error("Error occurred signin sugnup:", error);
