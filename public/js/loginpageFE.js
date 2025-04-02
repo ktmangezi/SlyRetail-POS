@@ -311,7 +311,7 @@ submitButton.addEventListener('click', (e) => {
                     else {
                         window.location.href = '/thirdPartyToken';  // This runs in the browser
                         const sessionId = localStorage.getItem('sessionId');
-                        localStorage.clear();
+                        // localStorage.clear();
                         if (sessionId) {
                             localStorage.setItem('sessionId', sessionId);
                         }
