@@ -100,9 +100,8 @@ fetch('/currencies')
                                 //OPENING BALANCE CALCULATIONS FUNCTION
                                 let startDate = ''
                                 let endDate = ''
-                                //check if the accouting period has been set
+                                //check if the accounting period has been set
                                 const myAccStartDate = localStorage.getItem('firstDateOfAccountingPeriod');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
-                                // const myAccEndDate = localStorage.getItem('lastDateOfAccountingPeriod');
                                 const myStartDate = localStorage.getItem('firstDate');//DATE STORED IN LOCAL STORAGE FROM OTHER JS FILES
                                 const myEndDate = localStorage.getItem('lastDate');
 
@@ -114,16 +113,16 @@ fetch('/currencies')
                                     const parts = startDate.split("-");
                                     const formattedDate = parts[2] + "/" + parts[1] + "/" + new Date(myStartDate).getFullYear();
                                     const formattedStartDates = new Date(formattedDate);
-                                    startDate = new Date(formattedStartDates);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                    endDate = new Date();
+                                    startDate = moment.tz(formattedStartDates, "Africa/Harare").startOf('day').toDate(); // Use moment timezone
+                                    endDate = moment.tz(new Date(), "Africa/Harare").endOf('day').toDate(); // Use moment timezone
                                     trialBalance(startDate, endDate)
                                 }
                                 else if ((myAccStartDate !== null && myEndDate !== null)) {
                                     const parts = myAccStartDate.split("-");
                                     const formattedDate = parts[2] + "/" + parts[1] + "/" + new Date(myStartDate).getFullYear();
                                     const formattedStartDates = new Date(formattedDate);
-                                    startDate = new Date(formattedStartDates);//ELSE CONVERT THE DATES IN LOCAL STORAGE TO DATE FORMAT
-                                    endDate = new Date(myEndDate);
+                                    startDate = moment.tz(formattedStartDates, "Africa/Harare").startOf('day').toDate(); // Use moment timezone
+                                    endDate = moment.tz(new Date(myEndDate), "Africa/Harare").endOf('day').toDate(); // Use moment timezone
                                     trialBalance(startDate, endDate)
                                 }
                                 //========================================================================================================
