@@ -112,10 +112,12 @@ setInterval(checkSessionExpiry, 5000);
 window.addEventListener('focus', checkSessionExpiry);
 // GET THE SESSION ID FROM THE LOCALSTORAGE
 
-
+let fetchStatus = false
 fetch('/dbname')
     .then(response => response.json())
     .then(data => {
+        fetchStatus = true
+        localStorage.setItem('fetchStatus', fetchStatus); // Store the database name in local storage
         // This will contain all the Menu Items
         const menuItems = document.querySelector(".icon-nav");
         menuItems.insertAdjacentHTML(
