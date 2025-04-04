@@ -8,6 +8,8 @@ import { CashflowCategoriesModel } from '../Schemas/slyretailCategoriesSchemas.j
 import { CashflowModel } from '../Schemas/slyretailCashflowSchemas.js';
 import { versionControlModel } from '../Schemas/slyretailVersionControlSchemas.js';
 import { StoresModel } from '../Schemas/slyretailStoresSchemas.js';
+import { FinancialPositionModel } from '../Schemas/slyretailFinancialPositionsSchemas.js';
+
 import { v4 as uuidv4 } from 'uuid';
 import e from 'express';
 let cashFlows = []
@@ -15,7 +17,7 @@ let cashFlows = []
 let loggedInStatus = "False";
 let currencies = [];
 let dbConnection = null; // Global database connection
-let currentVersion = "1.4"
+let latestVersion = "1.5"
 let loggedInStatus2 = ""
 let existingthirdPartyToken = ''
 // SignUp/SignIn function
@@ -42,7 +44,7 @@ async function signUpSignIn(req, databaseName, email, databasePassword, signingC
                         // Create the model with the specific connection
                         currencies = await myCurrenciesModelModel.find()
                         //this is to keep the current structure of databases, the web interface does not have a version but the database will need to be controlled
-                        const newVersionEntry = new myversionControlModelModel({ version: currentVersion });
+                        const newVersionEntry = new myversionControlModelModel({ version: latestVersion });
                         await newVersionEntry.save()
                             .then(() => console.log('New version entry saved successfully!'))
                             .catch(error => {
@@ -118,6 +120,28 @@ async function signUpSignIn(req, databaseName, email, databasePassword, signingC
                         }
                         catch (error) {
                             console.error("Error saving store", error);
+                        }
+
+                        //save the financial position dta
+                        // Save as a new financial position
+                        try {
+                            const financialPosition = {
+                                PPE: 0,
+                                INVENTORY: 0,
+                                DEBTORS: 0,
+                                CASH: 0,
+                                SHARE_CAPITAL: 0,
+                                SHAREHOLDER_LOAN: 0,
+                                TAXATION: 0,
+                                CREDITORS: 0,
+                                LONG_TERM_LOAN: 0,
+                                DATE: new Date().getFullYear(), // Get the current year
+                            };
+                            const financialPositionEntry = new FinancialPositionModel(financialPosition);
+                            await financialPositionEntry.save();
+                        }
+                        catch (error) {
+                            console.error("Error saving financial position", error);
                         }
                         // Save credentials
                         const createAndSaveCredentials = async (User_Account, DbPassword, Email) => {
@@ -369,16 +393,16 @@ async function signUpSignIn(req, databaseName, email, databasePassword, signingC
                     console.error("Error occurred while querying CredentialsModel:", error);
                     return
                 }
-                //create versioncontrols collection if it doesnt exist and create a version control document with version 1.4
-                const existingVersionControl = await myversionControlModelModel.findOne({ version: currentVersion });
-                if (!existingVersionControl) {
-                    const newVersionEntry = new myversionControlModelModel({ version: currentVersion });
-                    await newVersionEntry.save();
-                    console.log('New version entry saved successfully!');
-                }
+                // //create versioncontrols collection if it doesnt exist and create a version control document with version 1.4
+                // const existingVersionControl = await myversionControlModelModel.findOne({ version: latestVersion });
+                // if (!existingVersionControl) {
+                //     const newVersionEntry = new myversionControlModelModel({ version: latestVersion });
+                //     await newVersionEntry.save();
+                //     console.log('New version entry saved successfully!');
+                // }
                 //==============================================================
                 const existingVersion = await myversionControlModelModel.find();
-                async function handleDatabaseUpgrades(db, currentVersion) {
+                async function handleDatabaseUpgrades(db, latestVersion) {
                     try {
                         const versionControlModel = myversionControlModelModel;
                         const cashflowModel = myCashflowModelModel;
@@ -389,8 +413,7 @@ async function signUpSignIn(req, databaseName, email, databasePassword, signingC
                         // Get current version
                         const existingVersion = await versionControlModel.find().sort({ _id: -1 }).limit(1);
                         if (!existingVersion.length) return;
-                        console.log(currentVersion)
-                        const currentDBVersion = existingVersion[0].version;
+                        let currentDBVersion = existingVersion[0].version;
 
                         // Define upgrade steps
                         const upgradeSteps = {
@@ -503,13 +526,108 @@ async function signUpSignIn(req, databaseName, email, databasePassword, signingC
                                         }
                                     }
                                 }
+
+                                //================================================================================================================
+                                await calculateYearlyClosingBalances(db)
+                                async function calculateYearlyClosingBalances(db) {
+                                    const Cashflow = CashflowModel(db);
+                                    const financialPositionModel = FinancialPositionModel(db);
+                                    try {
+                                        // Get all cashflows (optimized query)
+                                        const cashflows = await Cashflow.find({})
+                                            .select('CashFlowDate CashFlowAmount CashFlowType') // Only needed fields
+                                            .lean(); // Faster processing
+                                        if (!cashflows.length) return [];
+
+                                        // Step 1: Group transactions by Year
+                                        const yearlyTransactions = {};
+                                        cashflows.forEach((flow) => {
+                                            const [day, month, year] = flow.CashFlowDate.split('/');
+                                            if (!yearlyTransactions[year]) {
+                                                yearlyTransactions[year] = {
+                                                    payins: 0,
+                                                    payouts: 0
+                                                };
+                                            }
+                                            if (flow.CashFlowType === 'Pay in') {
+                                                yearlyTransactions[year].payins += parseFloat(Number(flow.CashFlowAmount).toFixed(2));
+                                            } else if (flow.CashFlowType === 'Payout') {
+                                                yearlyTransactions[year].payouts += parseFloat(Number(flow.CashFlowAmount).toFixed(2));
+                                            }
+                                        });
+                                        // Step 2: Sort years chronologically
+                                        const sortedYears = Object.keys(yearlyTransactions).sort();
+                                        // Step 3: Calculate yearly closing balances
+                                        let runningBalance = 0;
+                                        const yearlyBalances = [];
+
+                                        sortedYears.forEach((year) => {
+                                            const { payins, payouts } = yearlyTransactions[year];
+                                            const netFlow = payins - payouts;
+
+                                            const openingBalance = runningBalance;
+                                            runningBalance += netFlow;
+
+                                            yearlyBalances.push({
+                                                year: parseInt(year),
+                                                openingBalance: openingBalance,
+                                                totalPayins: payins,
+                                                totalPayouts: payouts,
+                                                netFlow: netFlow,
+                                                closingBalance: runningBalance
+                                            });
+                                            // console.log(yearlyBalances)
+                                        });
+                                        //save these yearly balances in the financial position collection
+                                        for (let i = 0; i < yearlyBalances.length; i++) {
+                                            const yearlyBalance = yearlyBalances[i];
+                                            const year = yearlyBalance.year;
+                                            const openingBalance = yearlyBalance.openingBalance;
+
+                                            const financialPosition = {
+                                                PPE: 0,
+                                                INVENTORY: 0,
+                                                DEBTORS: 0,
+                                                CASH: openingBalance,
+                                                SHARE_CAPITAL: 0,
+                                                SHAREHOLDER_LOAN: 0,
+                                                TAXATION: 0,
+                                                CREDITORS: 0,
+                                                LONG_TERM_LOAN: 0,
+                                                DATE: year,
+                                            };
+                                            console.log(financialPosition)
+                                            try {
+                                                const existingPosition = await financialPositionModel.findOne({ DATE: year });
+                                                if (!existingPosition) {
+                                                    //     // Update the existing financial position
+                                                    //     await financialPositionModel.updateOne(
+                                                    //         { DATE: year },
+                                                    //         { $set: financialPosition }
+                                                    //     );
+                                                    // } else {
+                                                    // Save as a new financial position
+                                                    const financialPositionEntry = new financialPositionModel(financialPosition);
+                                                    await financialPositionEntry.save();
+                                                }
+                                            } catch (error) {
+                                                console.error('Error saving or updating financial position:', error);
+                                            }
+                                        }
+                                        console.log(yearlyBalances)
+                                        return yearlyBalances;
+                                    } catch (error) {
+                                        console.error('Error calculating yearly balances:', error);
+                                        throw error;
+                                    }
+                                }
                             }
                         };
 
                         // Execute necessary upgrades in order
-                        const versions = ['1.2', '1.3', '1.4'];
+                        const versions = ['1.2', '1.3', '1.4', '1.5'];
                         const currentIndex = versions.indexOf(currentDBVersion);
-
+                        console.log(currentIndex + 'currentIndex')
                         if (currentIndex === -1) {
                             console.log(`Current version ${currentDBVersion} not in upgrade path`);
                             return;
@@ -517,27 +635,23 @@ async function signUpSignIn(req, databaseName, email, databasePassword, signingC
 
                         for (let i = currentIndex; i < versions.length; i++) {
                             const targetVersion = versions[i];
-                            // console.log(`Upgrading from ${currentDBVersion} to ${targetVersion}`);
+                            console.log(`Upgrading from ${currentDBVersion} to ${targetVersion}`);
                             if (upgradeSteps[targetVersion]) {
                                 await upgradeSteps[targetVersion]();
-
-                                // Update version after successful upgrade
-                                await versionControlModel.updateOne(
-                                    { _id: existingVersion[0]._id },
-                                    { $set: { version: targetVersion } }
-                                );
+                                // Update the collection to the next upgrade version
+                                const nextVersionIndex = i + 1;
+                                if (nextVersionIndex <= versions.length) {
+                                    const nextVersion = versions[nextVersionIndex];
+                                    await versionControlModel.updateOne(
+                                        { _id: existingVersion[0]._id },
+                                        { $set: { version: nextVersion } }
+                                    );
+                                    console.log(`Collection updated to next upgrade version: ${nextVersion}`);
+                                }
                             }
                         }
 
-                        // Final version update
-                        if (currentDBVersion !== currentVersion) {
-                            await versionControlModel.updateOne(
-                                { _id: existingVersion[0]._id },
-                                { $set: { version: currentVersion } }
-                            );
-                        }
-
-                        // console.log('Database upgrades completed successfully');
+                        console.log('Database upgrades completed successfully');
                     } catch (error) {
                         console.error('Error during database upgrades:', error);
                         throw error;
