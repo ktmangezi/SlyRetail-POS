@@ -22,7 +22,7 @@ import { insertNewCurrency, updateCurrencies, updateCurrencyName, updateBaseCurr
 import { payOutData } from './Controllers/payOutController.js';
 // import { getExpenseCategoryTotals } from './Controllers/payOutCategoriesController.js';
 // import { getIncomeCategoryTotals } from './Controllers/payInCategoriesController.js';
-import { getTrialBalanceData } from './Controllers/trialBalanceController.js';
+import { getTrialBalanceData, arrayForImport } from './Controllers/trialBalanceController.js';
 import { getAccountingPeriodDetails } from './Controllers/accountingPeriodController.js';
 import { updateAccountingPeriod } from './Controllers/accountingPeriodController.js';
 import { saveToken, checkIfTokenExists, getUserCredentials, updateUserAccount, deleteDatabase } from './Controllers/credentialsController.js';
@@ -35,7 +35,7 @@ import {
 import { getadvancedHeaderStatusArray, saveHeaderStatusAdv } from './Controllers/advaCashMngmentHeadersSettingsController.js';
 import { getpayInHeaderStatusArray, saveHeaderStatusPayIn } from './Controllers/payInHeadersSettingsController.js';
 import { getpayOutHeaderStatusArray, saveHeaderStatusPayOut } from './Controllers/payOutHeadersSettingsController.js';
-import { exportingArray, arrayForImport } from './Controllers/exportImportController.js';
+import { exportingArray } from './Controllers/exportImportController.js';
 import { insertCategory, getCategories, updateCategoryRow, deleteCategory, getCategoryTotals, updateAssignedCategories } from './Controllers/categoriesController.js';
 
 
@@ -901,16 +901,16 @@ app.post('/updateAccountingPeriod', async (req, res) => {
 });
 
 //========================================================================================
-app.get('/cashFlowArray', async (req, res) => {
+app.post('/cashFlowArray', async (req, res) => {
 
   try {
-    // Get the session ID from the 'connect.sid' cookie
-    const actualSessionId = req.cookies['connect.sid']; // Access the cookie directly
-    //Remove the 's:' prefix and return only the actual session ID
-    const sessionId = actualSessionId.split(':')[1].split('.')[0];
-    const { cashFlows } = await arrayForImport(req, sessionId);
+    const selectedStoreName = req.body.selectedStoreName;
+    const startDate = req.body.startDate;
+    const endDate = req.body.endDate;
+    const sessionId = req.body.sessionId;
+    const { data } = await arrayForImport(req, startDate, endDate, sessionId, selectedStoreName);
     // Send a response back to the client
-    res.status(200).json(cashFlows);
+    res.status(200).json(data);
   } catch (err) {
     console.error('Error:', err);
     res.status(500).json({ error: 'An error occurred' });
@@ -922,11 +922,11 @@ app.get('/TrialBalance', async (req, res) => {
   const actualSessionId = req.cookies['connect.sid']; // Access the cookie directly
   //Remove the 's:' prefix and return only the actual session ID
   const sessionId = actualSessionId.split(':')[1].split('.')[0];
-  const { isocode, totalCostIncome, totalCostExpenses } = await getTrialBalanceData(req, sessionId)
+  const { isocode } = await getTrialBalanceData(req, sessionId)
   const { credentials } = await getUserCredentials(req, sessionId);
   if (credentials) {
     const accountName = credentials.User_Account
-    res.render("trialBalance", { isocode, accountName, totalCostIncome, totalCostExpenses });
+    res.render("trialBalance", { isocode, accountName });
   }
 });
 
