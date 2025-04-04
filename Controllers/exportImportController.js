@@ -85,24 +85,3 @@ export async function exportingArray(req, startDate, endDate, pageSize, page, pa
     }
 }
 //==============================================================================================================================
-export async function arrayForImport(req, sessionId) {
-    try {
-
-        const db = await connectDB(req, databaseName, signingCriteria, sessionId);
-        if (db) {
-            // Create the model with the specific connection
-            const myCashflowModel = CashflowModel(db);
-            cashFlows = await myCashflowModel.find();
-            // Always Sort the array by 'income date' in ascending order, when the user want to change this it is up to her and the settings to be kept under local storage
-            cashFlows.sort((a, b) => {
-                const [dayA, monthA, yearA] = a.CashFlowDate.split('/');
-                const [dayB, monthB, yearB] = b.CashFlowDate.split('/');
-                return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
-            });
-            return { cashFlows };
-        }
-    }
-    catch (err) {
-        console.error('Error connecting to MongoDB:', err);
-    }
-}
