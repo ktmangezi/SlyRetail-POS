@@ -13,10 +13,10 @@ function displayContainerBlocks() {
 
 }
 const fetchStatus = localStorage.getItem('fetchStatus')
-if (fetchStatus === 'true') {
-    // Show the spinner and loader container
-    displayContainerBlocks()
-}
+// if (fetchStatus === 'true') {
+// Show the spinner and loader container
+displayContainerBlocks()
+// }
 
 // This is looping through dropdown options adding event listeners then fetch dat from the selected third part 
 let allTokenOptions = document.querySelectorAll(".thirdPartytokenOptions")
